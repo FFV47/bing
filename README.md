@@ -83,4 +83,4 @@ Edit `src/config.js` to customize the behavior:
 
 ## License
 
-MIT
+GNU AGPLv3
