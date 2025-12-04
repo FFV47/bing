@@ -15,11 +15,7 @@ async function initBrowser() {
   const debugUrl = `http://127.0.0.1:${config.chromeDebugPort}`;
 
   console.log("Connecting to existing Chrome instance...");
-  console.log(`  Debug URL: ${debugUrl}`);
-  // console.log("");
-  // console.log("  ⚠️  Make sure Chrome is running with remote debugging enabled:");
-  // console.log(`     google-chrome --remote-debugging-port=${config.chromeDebugPort}`);
-  // console.log("");
+  console.log(`Debug URL: ${debugUrl}`);
 
   try {
     browser = await puppeteer.connect({
@@ -228,7 +224,6 @@ async function main() {
   console.log("Configuration:");
   console.log(`  • Interval: ${formatInterval(config.minIntervalMs)} - ${formatInterval(config.maxIntervalMs)}`);
   console.log(`  • Search terms: ${config.searchTerms.length} terms loaded`);
-  console.log(`  • Randomize: ${config.randomizeSearches ? "Yes" : "No"}`);
   console.log(`  • Typing delay: ${config.typingDelayMs}ms per character`);
   console.log(`  • Max searches: ${config.maxSearches === 0 ? "Unlimited" : config.maxSearches}`);
   console.log("\nPress Ctrl+C to stop the application.\n");

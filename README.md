@@ -1,6 +1,21 @@
 # Bing Auto-Search
 
-An automation application that opens a browser and performs searches on Bing at random intervals. Built with Node.js and Puppeteer.
+An automation application that opens a browser and performs searches on Bing at random intervals.
+Built with Node.js and Puppeteer.
+
+## Disclaimer
+
+⚠️ **Use at your own risk.** Microsoft Bing's Terms of Use is governed by the [Microsoft Services Agreement](https://www.microsoft.com/en-us/servicesagreement/). By using this application, you acknowledge and agree to the following:
+
+- This application **may violate the terms of service of Microsoft Bing or any related services.**
+- Using automation tools on third-party services **may violate their terms of use**.
+- You should review and comply with all applicable terms of use before using this application.
+- This application assists with Bing searches and Bing Rewards activities **only when manually triggered or scheduled by you**. No automation runs on its own unless explicitly configured.
+- This application is an independent tool and is **not affiliated, endorsed, or sponsored by Microsoft, Bing, or any of their subsidiaries**.
+- You alone are responsible for any actions taken using this application, including any potential
+  account consequences.
+- This application is intended **for educational or personal productivity purposes only**. Misuse for spamming, abuse, or policy violations is strongly discouraged and not supported.
+- If you do not agree, please refrain from using this application.
 
 ## Features
 
@@ -8,7 +23,6 @@ An automation application that opens a browser and performs searches on Bing at 
 - ⌨️ Human-like typing simulation
 - 📜 Smooth page scrolling behavior
 - 🔄 Configurable search terms with auto-generation
-- 🌐 Connects to an existing Chrome instance via remote debugging
 - ⚙️ Fully customizable configuration
 
 ## Prerequisites
@@ -74,12 +88,13 @@ Edit `src/config.js` to customize the behavior:
 
 ## How It Works
 
-1. The application connects to Chrome via the DevTools Protocol (CDP)
-2. Opens a new tab and navigates to Bing
-3. Performs a search with human-like typing behavior
-4. Scrolls through results naturally
-5. Waits a random interval (between min and max configured values)
-6. Repeats until the maximum number of searches is reached
+1. The application starts a Chrome instance with remote debugging enabled
+2. Connects to Chrome via the DevTools Protocol (CDP)
+3. Opens a new tab and navigates to Bing
+4. Performs a search with human-like typing behavior
+5. Scrolls through results naturally
+6. Waits a random interval (between min and max configured values)
+7. Repeats until the maximum number of searches is reached
 
 ## License
 
