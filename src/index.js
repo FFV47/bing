@@ -187,6 +187,7 @@ async function performSearch(query) {
     console.log("  ✓ Search completed successfully!\n");
   } catch (error) {
     console.error(`  ✗ Search failed: ${error.message}\n`);
+    throw error;
   }
 }
 
@@ -241,8 +242,14 @@ async function main() {
   // Perform initial search immediately
   const { term: initialTerm, nextIndex: newIndex } = getSearchTerm(termIndex);
   termIndex = newIndex;
-  await performSearch(initialTerm);
-  searchCount++;
+  try {
+    await performSearch(initialTerm);
+    searchCount++;
+  } catch {
+    console.log("\nSearch failed. Shutting down...");
+    await closeBrowser();
+    process.exit(1);
+  }
 
   // Schedule the next search
   scheduleNextSearch();
@@ -319,9 +326,16 @@ async function main() {
 
       const { term, nextIndex } = getSearchTerm(termIndex);
       termIndex = nextIndex;
-      await performSearch(term);
-      searchCount++;
-      scheduleNextSearch();
+      try {
+        await performSearch(term);
+        searchCount++;
+        scheduleNextSearch();
+      } catch {
+        console.log("\nSearch failed. Shutting down...");
+        console.log(`Total searches performed: ${searchCount}`);
+        await closeBrowser();
+        process.exit(1);
+      }
     }, nextInterval);
   }
 }
