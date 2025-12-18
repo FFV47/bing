@@ -10,7 +10,10 @@
     "sourceMap": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": true,
-    "noEmit": true
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false
   },
   "exclude": ["node_modules", "**/node_modules/*", "chrome-user-data", "dist", "**/dist/*"]
 }

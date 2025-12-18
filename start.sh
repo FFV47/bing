@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Bing Auto-Search Startup Script
-# This script starts Chrome with remote debugging and then runs the app
+# This script generates search terms, starts Chrome with remote debugging, and runs the app
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEBUG_PORT=9222
@@ -10,6 +10,42 @@ USER_DATA_DIR="$SCRIPT_DIR/chrome-user-data"
 echo "╔════════════════════════════════════════════╗"
 echo "║     Bing Auto-Search Startup Script        ║"
 echo "╚════════════════════════════════════════════╝"
+echo ""
+
+# Generate search terms first
+echo "→ Generating fresh search terms using Gemini AI..."
+
+# Remove existing search-terms.json to ensure fresh generation
+# rm -f "$SCRIPT_DIR/src/search-terms.json"
+
+MAX_TERM_ATTEMPTS=10
+TERM_ATTEMPT=0
+TERMS_GENERATED=false
+
+while [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; do
+    TERM_ATTEMPT=$((TERM_ATTEMPT + 1))
+    echo "  Attempt $TERM_ATTEMPT of $MAX_TERM_ATTEMPTS..."
+
+    node "$SCRIPT_DIR/src/generateTermsGemini.js"
+
+    if [ -f "$SCRIPT_DIR/src/search-terms.json" ]; then
+        echo "✓ Search terms generated successfully!"
+        TERMS_GENERATED=true
+        break
+    fi
+
+    if [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; then
+        echo "  ✗ Failed to generate terms. Waiting 30 seconds before retry..."
+        sleep 30
+    fi
+done
+
+if [ "$TERMS_GENERATED" = false ]; then
+    echo "✗ Error: Failed to generate search terms after $MAX_TERM_ATTEMPTS attempts."
+    echo "  Aborting operation."
+    exit 1
+fi
+
 echo ""
 
 # Kill any existing Chrome instances with remote debugging
@@ -59,9 +95,6 @@ if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
     exit 1
 fi
 
-echo ""
-echo "→ Generating fresh search terms..."
-node scripts/generate-terms.js
 echo ""
 echo "→ Starting Bing Auto-Search application..."
 echo ""

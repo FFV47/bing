@@ -1,5 +1,8 @@
 import puppeteer from "puppeteer";
 import { config } from "./config.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 /** @type {import('puppeteer').Browser | null} */
 let browser = null;
@@ -50,7 +53,7 @@ async function closeBrowser() {
     page = null;
   }
   if (browser) {
-    browser.disconnect(); // Disconnect without closing Chrome
+    await browser.disconnect(); // Disconnect without closing Chrome
     browser = null;
   }
 }
@@ -66,13 +69,12 @@ function getRandomInterval() {
 
 /**
  * Gets the next search term based on configuration
+ * @param {string[]} terms - Array of search terms
  * @param {number} index - Current index in the search terms array
  * @returns {{ term: string, nextIndex: number }} The search term and next index
  */
-function getSearchTerm(index) {
-  const { searchTerms } = config;
-
-  const term = searchTerms[index % searchTerms.length];
+function getSearchTerm(terms, index) {
+  const term = terms[index % terms.length];
   return { term, nextIndex: index + 1 };
 }
 
@@ -104,6 +106,7 @@ async function smoothScroll(targetY, duration) {
           if (progress < 1) {
             requestAnimationFrame(step);
           } else {
+            // @ts-ignore
             resolve();
           }
         }
@@ -186,6 +189,7 @@ async function performSearch(query) {
 
     console.log("  ✓ Search completed successfully!\n");
   } catch (error) {
+    // @ts-ignore
     console.error(`  ✗ Search failed: ${error.message}\n`);
     throw error;
   }
@@ -230,6 +234,9 @@ async function main() {
   console.log("\nPress Ctrl+C to stop the application.\n");
   console.log("─".repeat(50) + "\n");
 
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const searchTerms = JSON.parse(readFileSync(join(__dirname, "search-terms.json"), "utf-8").toString());
+
   // Initialize the browser
   await initBrowser();
 
@@ -240,7 +247,7 @@ async function main() {
   let countdownIntervalId = null;
 
   // Perform initial search immediately
-  const { term: initialTerm, nextIndex: newIndex } = getSearchTerm(termIndex);
+  const { term: initialTerm, nextIndex: newIndex } = getSearchTerm(searchTerms, termIndex);
   termIndex = newIndex;
   try {
     await performSearch(initialTerm);
@@ -252,7 +259,7 @@ async function main() {
   }
 
   // Schedule the next search
-  scheduleNextSearch();
+  void scheduleNextSearch();
 
   // Handle graceful shutdown
   process.on("SIGINT", async () => {
@@ -324,12 +331,12 @@ async function main() {
         process.stdout.write("\r");
       }
 
-      const { term, nextIndex } = getSearchTerm(termIndex);
+      const { term, nextIndex } = getSearchTerm(searchTerms, termIndex);
       termIndex = nextIndex;
       try {
         await performSearch(term);
         searchCount++;
-        scheduleNextSearch();
+        await scheduleNextSearch();
       } catch {
         console.log("\nSearch failed. Shutting down...");
         console.log(`Total searches performed: ${searchCount}`);
