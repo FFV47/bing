@@ -1,30 +1,27 @@
 import { GoogleGenAI } from "@google/genai";
-import { writeFile, unlink } from "node:fs/promises";
-import { existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { config } from "./config.js";
 import * as z from "zod";
+import { config } from "./config.js";
 
 // Get the directory of this script
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = join(__dirname, "generated");
+
 export const SEARCH_TERMS_PATH = join(__dirname, "generated", "search-terms.json");
 const RAW_RESPONSE_PATH = join(__dirname, "generated", "rawResponse.txt");
 
-// json schema for validation
-const SearchTermsSchema = z.array(z.string().describe("search term"));
-const jsonSchema = SearchTermsSchema.toJSONSchema();
+// Run only when executed directly (e.g., `node generateTermsGemini.js`)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await generateTerms();
+}
 
-writeFileSync(join(__dirname, "jsonSchema.json"), JSON.stringify(jsonSchema, null, 2));
-
-const currentYear = new Date().getFullYear();
-
-// The client gets the API key from the environment variable `GEMINI_API_KEY`.
-const ai = new GoogleGenAI({});
-await main();
-
-async function main() {
+/**
+ * Generates search terms using the Gemini API and saves them to a JSON file.
+ */
+export async function generateTerms() {
   if (!existsSync(GENERATED_DIR)) {
     mkdirSync(GENERATED_DIR);
   }
@@ -36,6 +33,15 @@ async function main() {
   if (existsSync(RAW_RESPONSE_PATH)) {
     await unlink(RAW_RESPONSE_PATH);
   }
+
+  // json schema for validation
+  const SearchTermsSchema = z.array(z.string().describe("search term"));
+  const jsonSchema = SearchTermsSchema.toJSONSchema();
+
+  const currentYear = new Date().getFullYear();
+
+  // The client gets the API key from the environment variable `GEMINI_API_KEY`.
+  const ai = new GoogleGenAI({});
 
   const prompt = `Generate ${config.maxSearches} search terms for a search engine in Portuguese. If possible generate these terms based on google search trending topics for ${currentYear} or after. Put it all in a array of strings.`;
 
@@ -61,34 +67,9 @@ async function main() {
     return;
   }
 
-  await writeFile(SEARCH_TERMS_PATH, JSON.stringify(schemaResult.data, null, 2));
-  // const searchTerms = extractArrayFromResponse(responseText);
+  const searchTerms = JSON.stringify(schemaResult.data, null, 2);
 
-  // if (searchTerms) {
-  //   await writeFile(SEARCH_TERMS_PATH, JSON.stringify(searchTerms, null, 2));
-  //   console.log("Search terms saved to search-terms.json");
-  // } else {
-  //   console.error("Could not extract array from response");
-  // }
+  console.log("Generated search terms:");
+  console.log(searchTerms);
+  await writeFile(SEARCH_TERMS_PATH, searchTerms);
 }
-
-// /**
-//  * Extracts a JSON array of strings from a text response.
-//  * @param {string} text - The text containing the array.
-//  * @returns {string[] | null} - The extracted array or null if not found.
-//  */
-// function extractArrayFromResponse(text) {
-//   // Regex to capture a JSON array of strings
-//   const arrayRegex = /\[[\s\S]*?\]/;
-//   const match = text.match(arrayRegex);
-
-//   if (match) {
-//     try {
-//       return JSON.parse(match[0]);
-//     } catch (error) {
-//       console.error("Failed to parse array:", error);
-//       return null;
-//     }
-//   }
-//   return null;
-// }

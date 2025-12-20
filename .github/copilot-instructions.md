@@ -1,91 +1,91 @@
-# Bing Auto-Search - Copilot Instructions
+# Copilot Instructions for Bing Auto-Search
 
 ## Project Overview
 
-A Puppeteer-based automation tool that performs Bing searches with human-like behavior (typing simulation, smooth scrolling, random intervals). Built for educational/personal use.
+This is a Node.js automation tool that performs Bing searches at random intervals using Puppeteer. It connects to an existing Chrome instance via remote debugging and uses Google Gemini AI to generate trending search terms in Portuguese.
 
 ## Architecture
 
 ```
 src/
-├── index.js    # Main entry point - browser automation, search loop, graceful shutdown
-├── config.js   # All configurable parameters (intervals, search terms, ports)
-scripts/
-├── generate-terms.js  # Generates random search terms by combining word categories
-start.sh        # Full startup workflow (Chrome + term generation + app)
+├── index.js          # Main entry point, orchestrates the search loop
+├── config.js         # Centralized configuration (intervals, ports, URLs)
+├── browser.js        # Puppeteer browser/page lifecycle management
+├── search.js         # Search execution with retry logic and human-like behavior
+├── utils.js          # Utility functions (intervals, sleep, formatting)
+├── generateTermsGemini.js  # AI-powered search term generation
+└── generated/        # Runtime-generated files (search-terms.json)
 ```
 
-**Key Flow:**
+**Key Data Flow:**
 
-1. `start.sh` launches Chrome with `--remote-debugging-port=9222`
-2. Puppeteer connects via CDP (not launching its own browser)
-3. Performs searches with typing delay → scroll down → scroll up → random wait
-4. Cycles through `config.searchTerms` until `maxSearches` reached
+1. `generateTermsGemini.js` → Gemini API → `generated/search-terms.json`
+2. `index.js` reads terms → `browser.js` manages Chrome connection → `search.js` executes searches
 
-## Developer Workflow
+## Code Conventions
+
+- **ES Modules only** - Uses `import`/`export`, not CommonJS (`"type": "module"`)
+- **JSDoc for types** - TypeScript is used only for type checking (`pnpm typecheck`), not compilation
+- **Human-like simulation** - Searches include typing delays, scrolling, and random intervals to mimic real behavior
+- **Graceful handling** - Browser disconnects trigger automatic reconnection (see `performSearchWithRetry` pattern)
+
+## Development Commands
 
 ```bash
-# Quick start (recommended) - handles Chrome, generates terms, runs app
-./start.sh
-
-# Development with auto-restart
-pnpm dev
-
-# Generate new random search terms (updates config.js in-place)
-node scripts/generate-terms.js
-
-# Manual Chrome launch (if not using start.sh)
-google-chrome --remote-debugging-port=9222 --user-data-dir=./chrome-user-data
+./start.sh          # Full workflow: generate terms → start Chrome → run app
+pnpm dev            # Watch mode (requires Chrome already running with --remote-debugging-port=9222)
+pnpm lint           # ESLint with TypeScript type checking
+pnpm typecheck      # TypeScript type validation only
 ```
 
-## Code Patterns
+## Key Patterns
 
-### Browser Connection
+### Browser Connection Pattern
+
+The app connects to an **existing** Chrome instance, not launching its own:
 
 ```javascript
-// Connect to existing Chrome, don't launch new instance
+// browser.js - Connect via CDP, don't launch
 browser = await puppeteer.connect({
   browserURL: `http://127.0.0.1:${config.chromeDebugPort}`,
-  defaultViewport: null,
 });
 ```
 
-### Human-like Behavior
+### Retry with Reconnection
 
-- Typing: `page.type(selector, text, { delay: config.typingDelayMs })`
-- Scrolling: Custom `smoothScroll()` using `requestAnimationFrame` with easing
-- Intervals: Random between `minIntervalMs` and `maxIntervalMs`
-
-### JSDoc Types
-
-Use JSDoc for Puppeteer types to enable IntelliSense:
+All searches use `performSearchWithRetry()` which handles Chrome disconnections:
 
 ```javascript
-/** @type {import('puppeteer').Browser | null} */
-let browser = null;
+// search.js - Retry pattern for disconnection handling
+if (!isBrowserConnected()) {
+  await reconnectBrowser(RETRY_DELAY_MS);
+}
 ```
 
-### Graceful Shutdown
+### Gemini JSON Schema Validation
 
-Always handle `SIGINT` to close tabs and disconnect (not close) browser.
+Search term generation uses Zod schemas for type-safe AI responses:
 
-## Configuration (`src/config.js`)
+```javascript
+// generateTermsGemini.js
+const SearchTermsSchema = z.array(z.string());
+const response = await ai.models.generateContent({
+  config: { responseMimeType: "application/json", responseJsonSchema: jsonSchema },
+});
+```
 
-| Option                            | Purpose                                       |
-| --------------------------------- | --------------------------------------------- |
-| `minIntervalMs` / `maxIntervalMs` | Random wait range between searches            |
-| `maxSearches`                     | Stop after N searches (0 = unlimited)         |
-| `typingDelayMs`                   | Milliseconds between keystrokes               |
-| `chromeDebugPort`                 | Must match Chrome's `--remote-debugging-port` |
-| `searchTerms`                     | Auto-generated array - don't edit manually    |
+## Environment Requirements
 
-## Search Term Generation
+- `GEMINI_API_KEY` environment variable is required for search term generation
+- Chrome must be started with `--remote-debugging-port=9222` (handled by `start.sh`)
+- Generated files go to `src/generated/` (gitignored)
 
-`scripts/generate-terms.js` combines word categories (adjectives, topics, subjects, actions, places, timeframes) using templates. Updates `config.js` directly via regex replacement.
+## Important Files
 
-## Important Constraints
+- [src/config.js](src/config.js) - All tunable parameters (intervals, delays, max searches)
+- [start.sh](start.sh) - Production startup script with retry logic for term generation
+- [chrome-user-data/](chrome-user-data/) - Chrome profile persisted between sessions (gitignored contents)
 
-- **Chrome user data**: Stored in `chrome-user-data/` for persistent sessions (login state, cookies)
-- **Port 9222**: Default debug port - must be free before starting
-- **ES Modules**: Project uses `"type": "module"` - use `import`/`export` only
-- **No tests**: Project has no test suite currently
+## Testing Notes
+
+No test framework is configured. Manual testing is done via `pnpm dev` with Chrome running in debug mode.

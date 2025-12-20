@@ -1,7 +1,7 @@
 # Bing Auto-Search
 
 An automation application that opens a browser and performs searches on Bing at random intervals.
-Built with Node.js and Puppeteer.
+Built with Node.js and Puppeteer, with AI-powered search term generation using Google Gemini.
 
 ## Disclaimer
 
@@ -20,9 +20,9 @@ Built with Node.js and Puppeteer.
 ## Features
 
 - 🔍 Automated Bing searches with randomized intervals
+- 🤖 AI-powered search term generation using Google Gemini (based on trending topics)
 - ⌨️ Human-like typing simulation
 - 📜 Smooth page scrolling behavior
-- 🔄 Configurable search terms with auto-generation
 - ⚙️ Fully customizable configuration
 
 ## Prerequisites
@@ -30,6 +30,7 @@ Built with Node.js and Puppeteer.
 - Node.js (v18 or higher recommended)
 - pnpm (or npm/yarn)
 - Google Chrome or Chromium browser
+- Google Gemini API key (set as `GEMINI_API_KEY` environment variable)
 
 ## Installation
 
@@ -76,25 +77,31 @@ Edit `src/config.js` to customize the behavior:
 | `typingDelayMs`   | `200`                  | Delay between keystrokes (simulates human typing) |
 | `chromeDebugPort` | `9222`                 | Chrome remote debugging port                      |
 | `bingBaseUrl`     | `https://www.bing.com` | Bing homepage URL                                 |
-| `searchTerms`     | `[...]`                | Array of search terms to cycle through            |
+
+### Environment Variables
+
+| Variable         | Required | Description                                           |
+| ---------------- | -------- | ----------------------------------------------------- |
+| `GEMINI_API_KEY` | Yes      | Your Google Gemini API key for search term generation |
 
 ## Scripts
 
-| Command                          | Description                              |
-| -------------------------------- | ---------------------------------------- |
-| `pnpm start`                     | Run the application                      |
-| `pnpm dev`                       | Run in watch mode (auto-restart on save) |
-| `node scripts/generate-terms.js` | Generate new random search terms         |
+| Command                           | Description                               |
+| --------------------------------- | ----------------------------------------- |
+| `pnpm start`                      | Run the application                       |
+| `pnpm dev`                        | Run in watch mode (auto-restart on save)  |
+| `node src/generateTermsGemini.js` | Generate new search terms using Gemini AI |
 
 ## How It Works
 
-1. The application starts a Chrome instance with remote debugging enabled
-2. Connects to Chrome via the DevTools Protocol (CDP)
-3. Opens a new tab and navigates to Bing
-4. Performs a search with human-like typing behavior
-5. Scrolls through results naturally
-6. Waits a random interval (between min and max configured values)
-7. Repeats until the maximum number of searches is reached
+1. **Search Term Generation**: Uses Google Gemini AI to generate trending search terms in Portuguese
+2. The startup script launches Chrome with remote debugging enabled
+3. Connects to Chrome via the DevTools Protocol (CDP) using Puppeteer
+4. Opens a new tab and navigates to Bing
+5. Performs searches with human-like typing behavior
+6. Scrolls through results naturally
+7. Waits a random interval (between min and max configured values)
+8. Repeats until the maximum number of searches is reached
 
 ## License
 

@@ -18,24 +18,24 @@ echo "→ Generating fresh search terms using Gemini AI..."
 # Remove existing search-terms.json to ensure fresh generation
 # rm -f "$SCRIPT_DIR/src/search-terms.json"
 
-MAX_TERM_ATTEMPTS=10
+MAX_TERM_ATTEMPTS=3
 TERM_ATTEMPT=0
 TERMS_GENERATED=false
 
 while [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; do
     TERM_ATTEMPT=$((TERM_ATTEMPT + 1))
-    echo "  Attempt $TERM_ATTEMPT of $MAX_TERM_ATTEMPTS..."
+    echo "Attempt $TERM_ATTEMPT of $MAX_TERM_ATTEMPTS..."
 
     node "$SCRIPT_DIR/src/generateTermsGemini.js"
 
-    if [ -f "$SCRIPT_DIR/src/search-terms.json" ]; then
+    if [ -f "$SCRIPT_DIR/src/generated/search-terms.json" ]; then
         echo "✓ Search terms generated successfully!"
         TERMS_GENERATED=true
         break
     fi
 
     if [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; then
-        echo "  ✗ Failed to generate terms. Waiting 30 seconds before retry..."
+        echo "✗ Failed to generate terms. Waiting 30 seconds before retry..."
         sleep 30
     fi
 done
@@ -106,10 +106,6 @@ npm start
 # When the app exits, optionally close Chrome
 echo ""
 echo "→ Application stopped."
-# read -p "Close Chrome? (y/n): " CLOSE_CHROME
-# if [ "$CLOSE_CHROME" = "y" ] || [ "$CLOSE_CHROME" = "Y" ]; then
-#     echo "→ Closing Chrome..."
-# fi
 
 kill $CHROME_PID 2>/dev/null
 echo "Done!"
