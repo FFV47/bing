@@ -1,6 +1,6 @@
 # Bing Auto-Search
 
-An automation application that opens a browser and performs searches on Bing at random intervals.
+A cross-platform automation application that opens a browser and performs searches on Bing at random intervals.
 Built with Node.js and Puppeteer, with AI-powered search term generation using Google Gemini.
 
 ## Disclaimer
@@ -24,12 +24,12 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
 - ⌨️ Human-like typing simulation
 - 📜 Smooth page scrolling behavior
 - ⚙️ Fully customizable configuration
+- 🖥️ **Cross-platform** - works on Windows, macOS, and Linux
 
 ## Prerequisites
 
-- Node.js (v18 or higher recommended)
-- pnpm (or npm/yarn)
-- Google Chrome or Chromium browser
+- Node.js (v18 or higher)
+- Google Chrome, Chromium, or Microsoft Edge browser
 - Google Gemini API key (set as `GEMINI_API_KEY` environment variable)
 
 ## Installation
@@ -44,58 +44,95 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
 2. Install dependencies:
 
    ```bash
-   pnpm install
+   npm install
+   ```
+
+3. Build the application:
+
+   ```bash
+   npm run build
    ```
 
 ## Usage
 
-### Quick Start (Recommended)
+### Quick Start
 
-Use the included startup script that handles everything automatically:
+Set your Gemini API key and run the application:
 
 ```bash
-./start.sh
+# Set your API key (Linux/macOS)
+export GEMINI_API_KEY=your_api_key_here
+
+# Set your API key (Windows PowerShell)
+$env:GEMINI_API_KEY="your_api_key_here"
+
+# Set your API key (Windows CMD)
+set GEMINI_API_KEY=your_api_key_here
+
+# Run the application
+npm start
 ```
 
-This script will:
+The application will:
 
-1. Close any existing Chrome debug instances
-2. Start Chrome with remote debugging enabled
-3. Generate fresh random search terms
-4. Run the auto-search application
-5. Clean up when finished
+1. Generate fresh search terms using Gemini AI
+2. Launch Chrome with remote debugging enabled
+3. Perform automated Bing searches
+4. Clean up when finished
+
+### Development Mode
+
+Run directly from source with auto-restart on changes:
+
+```bash
+npm run dev
+```
 
 ## Configuration
 
-Edit `src/config.js` to customize the behavior:
+Configuration can be customized via environment variables:
 
-| Option            | Default                | Description                                       |
-| ----------------- | ---------------------- | ------------------------------------------------- |
-| `minIntervalMs`   | `180000` (3m)          | Minimum interval between searches (milliseconds)  |
-| `maxIntervalMs`   | `300000` (5m)          | Maximum interval between searches (milliseconds)  |
-| `maxSearches`     | `30`                   | Maximum number of searches (0 = unlimited)        |
-| `typingDelayMs`   | `200`                  | Delay between keystrokes (simulates human typing) |
-| `chromeDebugPort` | `9222`                 | Chrome remote debugging port                      |
-| `bingBaseUrl`     | `https://www.bing.com` | Bing homepage URL                                 |
+| Environment Variable   | Default                | Description                                       |
+| ---------------------- | ---------------------- | ------------------------------------------------- |
+| `GEMINI_API_KEY`       | (required)             | Your Google Gemini API key                        |
+| `MIN_INTERVAL_MINUTES` | `3`                    | Minimum interval between searches (minutes)       |
+| `MAX_INTERVAL_MINUTES` | `5`                    | Maximum interval between searches (minutes)       |
+| `MAX_SEARCHES`         | `30`                   | Maximum number of searches (0 = unlimited)        |
+| `TYPING_DELAY_MS`      | `200`                  | Delay between keystrokes (simulates human typing) |
+| `CHROME_DEBUG_PORT`    | `9222`                 | Chrome remote debugging port                      |
+| `CHROME_USER_DATA_DIR` | `./chrome-user-data`   | Chrome user data directory                        |
+| `BING_BASE_URL`        | `https://www.bing.com` | Bing homepage URL                                 |
 
-### Environment Variables
+### Example with Custom Configuration
 
-| Variable         | Required | Description                                           |
-| ---------------- | -------- | ----------------------------------------------------- |
-| `GEMINI_API_KEY` | Yes      | Your Google Gemini API key for search term generation |
+```bash
+# Linux/macOS
+export GEMINI_API_KEY=your_api_key
+export MAX_SEARCHES=50
+export MIN_INTERVAL_MINUTES=2
+export MAX_INTERVAL_MINUTES=4
+npm start
+
+# Windows PowerShell
+$env:GEMINI_API_KEY="your_api_key"
+$env:MAX_SEARCHES="50"
+npm start
+```
 
 ## Scripts
 
-| Command                           | Description                               |
-| --------------------------------- | ----------------------------------------- |
-| `pnpm start`                      | Run the application                       |
-| `pnpm dev`                        | Run in watch mode (auto-restart on save)  |
-| `node src/generateTermsGemini.js` | Generate new search terms using Gemini AI |
+| Command             | Description                       |
+| ------------------- | --------------------------------- |
+| `npm start`         | Run the built application         |
+| `npm run dev`       | Run from source with auto-restart |
+| `npm run build`     | Build the application with Vite   |
+| `npm run lint`      | Run ESLint                        |
+| `npm run typecheck` | Run TypeScript type checking      |
 
 ## How It Works
 
 1. **Search Term Generation**: Uses Google Gemini AI to generate trending search terms in Portuguese
-2. The startup script launches Chrome with remote debugging enabled
+2. Automatically finds and launches Chrome/Chromium/Edge with remote debugging
 3. Connects to Chrome via the DevTools Protocol (CDP) using Puppeteer
 4. Opens a new tab and navigates to Bing
 5. Performs searches with human-like typing behavior

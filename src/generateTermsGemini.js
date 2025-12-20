@@ -1,17 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as z from "zod";
 import { config } from "./config.js";
 
-// Get the directory of this script
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const GENERATED_DIR = join(__dirname, "generated");
+// Use a directory relative to current working directory for portability
+const GENERATED_DIR = join(process.cwd(), "generated");
 
-export const SEARCH_TERMS_PATH = join(__dirname, "generated", "search-terms.json");
-const RAW_RESPONSE_PATH = join(__dirname, "generated", "rawResponse.txt");
+export const SEARCH_TERMS_PATH = join(GENERATED_DIR, "search-terms.json");
+const RAW_RESPONSE_PATH = join(GENERATED_DIR, "rawResponse.txt");
 
 // Run only when executed directly (e.g., `node generateTermsGemini.js`)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

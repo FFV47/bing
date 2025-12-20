@@ -1,3 +1,5 @@
 node_modules
 chrome-user-data
 src/generated
+.bing-auto-search
+dist

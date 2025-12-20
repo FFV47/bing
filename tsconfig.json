@@ -13,7 +13,16 @@
     "checkJs": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "types": ["node"]
   },
-  "exclude": ["node_modules", "**/node_modules/*", "chrome-user-data", "dist", "**/dist/*"]
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*",
+    "chrome-user-data",
+    "dist",
+    "**/dist/*",
+    ".bing-auto-search",
+    "scripts"
+  ]
 }
