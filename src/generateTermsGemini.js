@@ -59,6 +59,7 @@ export async function generateTerms() {
     console.error("No response text received from Gemini API");
     return;
   }
+
   writeFileSync(RAW_RESPONSE_PATH, responseText);
 
   const schemaResult = SearchTermsSchema.safeParse(JSON.parse(responseText));

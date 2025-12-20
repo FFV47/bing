@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
+import { closeBrowser, initBrowser } from "./browser.js";
 import { config } from "./config.js";
 import { SEARCH_TERMS_PATH } from "./generateTermsGemini.js";
-import { initBrowser, closeBrowser } from "./browser.js";
-import { performSearchWithRetry } from "./search.js";
-import { getRandomInterval, formatInterval } from "./utils.js";
-import { getSearchTerm } from "./search.js";
+import { getSearchTerm, performSearchWithRetry } from "./search.js";
+import { formatInterval, getRandomInterval } from "./utils.js";
 
 try {
   await main();

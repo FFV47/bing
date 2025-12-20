@@ -1,5 +1,5 @@
-import { config } from "./config.js";
 import { getPage, isBrowserConnected, reconnectBrowser } from "./browser.js";
+import { config } from "./config.js";
 import { sleep } from "./utils.js";
 
 const MAX_RETRY_ATTEMPTS = 3;
