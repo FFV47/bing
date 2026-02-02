@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { closeBrowser, initBrowser } from "./browser.js";
-import { config } from "./config.js";
+import { config, getMaxSearches, isMobileMode } from "./config.js";
 import { SEARCH_TERMS_PATH } from "./generateTermsGemini.js";
 import { getSearchTerm, performSearchWithRetry } from "./search.js";
 import { formatInterval, getRandomInterval } from "./utils.js";
@@ -16,14 +16,20 @@ try {
  * Main function that runs the auto-search loop
  */
 async function main() {
+  const mobileMode = isMobileMode();
+  const modeLabel = mobileMode ? "Mobile" : "Desktop";
+
   console.log("╔════════════════════════════════════════════╗");
-  console.log("║       Bing Auto-Search Application         ║");
+  console.log(`║   Bing Auto-Search Application (${modeLabel})   ║`);
   console.log("╚════════════════════════════════════════════╝\n");
 
+  const maxSearches = getMaxSearches();
+
   console.log("Configuration:");
+  console.log(`• Mode: ${modeLabel}`);
   console.log(`• Interval: ${formatInterval(config.minIntervalMs)} - ${formatInterval(config.maxIntervalMs)}`);
   console.log(`• Typing delay: ${config.typingDelayMs}ms per character`);
-  console.log(`• Max searches: ${config.maxSearches === 0 ? "Unlimited" : config.maxSearches}`);
+  console.log(`• Max searches: ${maxSearches === 0 ? "Unlimited" : maxSearches}`);
   console.log("\nPress Ctrl+C to stop the application.\n");
   console.log("─".repeat(50) + "\n");
 
@@ -107,8 +113,8 @@ async function main() {
     if (!isRunning) return;
 
     // Check if we've reached the maximum number of searches
-    if (config.maxSearches > 0 && searchCount >= config.maxSearches) {
-      console.log(`\nReached maximum number of searches (${config.maxSearches}). Stopping...`);
+    if (maxSearches > 0 && searchCount >= maxSearches) {
+      console.log(`\nReached maximum number of searches (${maxSearches}). Stopping...`);
       await closeBrowser();
       process.exit(0);
     }

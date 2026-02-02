@@ -4,7 +4,7 @@ import { unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as z from "zod";
-import { config } from "./config.js";
+import { getMaxSearches, isMobileMode } from "./config.js";
 
 // Get the directory of this script
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,11 +39,15 @@ export async function generateTerms() {
   const jsonSchema = SearchTermsSchema.toJSONSchema();
 
   const currentYear = new Date().getFullYear();
+  const maxSearches = getMaxSearches();
+  const modeLabel = isMobileMode() ? "Mobile" : "Desktop";
+
+  console.log(`Generating ${maxSearches} search terms for ${modeLabel} mode...`);
 
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
   const ai = new GoogleGenAI({});
 
-  const prompt = `Generate ${config.maxSearches} search terms for a search engine in Portuguese. If possible generate these terms based on google search trending topics for ${currentYear} or after. Don't include year in the terms itself if the year is the current year. Put it all in a array of strings.`;
+  const prompt = `Generate ${maxSearches} search terms for a search engine in Portuguese. If possible generate these terms based on google search trending topics for ${currentYear} or after. Don't include year in the terms itself if the year is the current year. Put it all in a array of strings.`;
 
   const response = await ai.models.generateContent({
     "model": "gemini-3-flash-preview",

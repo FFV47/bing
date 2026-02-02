@@ -7,8 +7,25 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEBUG_PORT=9222
 USER_DATA_DIR="$SCRIPT_DIR/chrome-user-data"
 
+# Check for mobile mode argument
+MOBILE_MODE=false
+MOBILE_ARG=""
+for arg in "$@"; do
+  if [ "$arg" = "--mobile" ] || [ "$arg" = "-m" ]; then
+    MOBILE_MODE=true
+    MOBILE_ARG="--mobile"
+    break
+  fi
+done
+
+if [ "$MOBILE_MODE" = true ]; then
+  MODE_LABEL="Mobile"
+else
+  MODE_LABEL="Desktop"
+fi
+
 echo "╔════════════════════════════════════════════╗"
-echo "║     Bing Auto-Search Startup Script        ║"
+echo "║   Bing Auto-Search Startup Script ($MODE_LABEL) ║"
 echo "╚════════════════════════════════════════════╝"
 echo ""
 
@@ -23,27 +40,27 @@ TERM_ATTEMPT=0
 TERMS_GENERATED=false
 
 while [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; do
-    TERM_ATTEMPT=$((TERM_ATTEMPT + 1))
-    echo "Attempt $TERM_ATTEMPT of $MAX_TERM_ATTEMPTS..."
+  TERM_ATTEMPT=$((TERM_ATTEMPT + 1))
+  echo "Attempt $TERM_ATTEMPT of $MAX_TERM_ATTEMPTS..."
 
-    node "$SCRIPT_DIR/src/generateTermsGemini.js"
+  node "$SCRIPT_DIR/src/generateTermsGemini.js" $MOBILE_ARG
 
-    if [ -f "$SCRIPT_DIR/src/generated/search-terms.json" ]; then
-        echo "✓ Search terms generated successfully!"
-        TERMS_GENERATED=true
-        break
-    fi
+  if [ -f "$SCRIPT_DIR/src/generated/search-terms.json" ]; then
+    echo "✓ Search terms generated successfully!"
+    TERMS_GENERATED=true
+    break
+  fi
 
-    if [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; then
-        echo "✗ Failed to generate terms. Waiting 30 seconds before retry..."
-        sleep 30
-    fi
+  if [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; then
+    echo "✗ Failed to generate terms. Waiting 30 seconds before retry..."
+    sleep 30
+  fi
 done
 
 if [ "$TERMS_GENERATED" = false ]; then
-    echo "✗ Error: Failed to generate search terms after $MAX_TERM_ATTEMPTS attempts."
-    echo "  Aborting operation."
-    exit 1
+  echo "✗ Error: Failed to generate search terms after $MAX_TERM_ATTEMPTS attempts."
+  echo "  Aborting operation."
+  exit 1
 fi
 
 echo ""
@@ -56,23 +73,23 @@ sleep 1
 # Find the Chrome executable
 CHROME_CMD=""
 for cmd in google-chrome-stable google-chrome chromium chromium-browser; do
-    if command -v "$cmd" &> /dev/null; then
-        CHROME_CMD="$cmd"
-        break
-    fi
+  if command -v "$cmd" &>/dev/null; then
+    CHROME_CMD="$cmd"
+    break
+  fi
 done
 
 if [ -z "$CHROME_CMD" ]; then
-    echo "✗ Error: Could not find Chrome or Chromium installed."
-    echo "  Please install Google Chrome or Chromium."
-    exit 1
+  echo "✗ Error: Could not find Chrome or Chromium installed."
+  echo "  Please install Google Chrome or Chromium."
+  exit 1
 fi
 
 echo "→ Found Chrome: $CHROME_CMD"
 
 # Start Chrome with remote debugging
 echo "→ Starting Chrome with remote debugging on port $DEBUG_PORT..."
-"$CHROME_CMD" --remote-debugging-port=$DEBUG_PORT --user-data-dir="$USER_DATA_DIR" > /dev/null 2>&1 &
+"$CHROME_CMD" --remote-debugging-port=$DEBUG_PORT --user-data-dir="$USER_DATA_DIR" >/dev/null 2>&1 &
 CHROME_PID=$!
 
 # Wait for Chrome to be ready
@@ -81,27 +98,27 @@ MAX_ATTEMPTS=30
 ATTEMPT=0
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if curl -s "http://127.0.0.1:$DEBUG_PORT/json/version" > /dev/null 2>&1; then
-        echo "✓ Chrome is ready!"
-        break
-    fi
-    ATTEMPT=$((ATTEMPT + 1))
-    sleep 0.5
+  if curl -s "http://127.0.0.1:$DEBUG_PORT/json/version" >/dev/null 2>&1; then
+    echo "✓ Chrome is ready!"
+    break
+  fi
+  ATTEMPT=$((ATTEMPT + 1))
+  sleep 0.5
 done
 
 if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-    echo "✗ Error: Chrome failed to start with remote debugging."
-    kill $CHROME_PID 2>/dev/null
-    exit 1
+  echo "✗ Error: Chrome failed to start with remote debugging."
+  kill $CHROME_PID 2>/dev/null
+  exit 1
 fi
 
 echo ""
-echo "→ Starting Bing Auto-Search application..."
+echo "→ Starting Bing Auto-Search application ($MODE_LABEL mode)..."
 echo ""
 
 # Change to the script's directory and run the app
-cd "$(dirname "$0")"
-npm start
+cd "$(dirname "$0")" || exit
+npm start -- $MOBILE_ARG
 
 # When the app exits, optionally close Chrome
 echo ""

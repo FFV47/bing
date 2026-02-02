@@ -20,6 +20,7 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
 ## Features
 
 - 🔍 Automated Bing searches with randomized intervals
+- 📱 Mobile mode support for earning mobile Bing Rewards points
 - 🤖 AI-powered search term generation using Google Gemini (based on trending topics)
 - ⌨️ Human-like typing simulation
 - 📜 Smooth page scrolling behavior
@@ -88,9 +89,29 @@ Edit `src/config.js` to customize the behavior:
 
 | Command                           | Description                               |
 | --------------------------------- | ----------------------------------------- |
-| `pnpm start`                      | Run the application                       |
+| `pnpm start`                      | Run the application (desktop mode)        |
+| `pnpm start -- --mobile`          | Run the application in mobile mode        |
 | `pnpm dev`                        | Run in watch mode (auto-restart on save)  |
 | `node src/generateTermsGemini.js` | Generate new search terms using Gemini AI |
+
+### Mobile Mode
+
+To earn mobile Bing Rewards points, run the application with the `--mobile` or `-m` flag:
+
+```bash
+# Using pnpm
+pnpm start -- --mobile
+
+# Or directly with node
+node src/index.js --mobile
+```
+
+Mobile mode emulates a mobile browser by:
+
+- Setting a mobile user agent (Android Chrome)
+- Configuring a mobile viewport with touch support
+
+**Tip:** Run desktop searches first, then run mobile searches separately to maximize your Bing Rewards points.
 
 ## How It Works
 

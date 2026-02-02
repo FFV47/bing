@@ -1,5 +1,5 @@
 import puppeteer from "puppeteer";
-import { config } from "./config.js";
+import { config, isMobileMode } from "./config.js";
 import { sleep } from "./utils.js";
 
 /** @type {import('puppeteer').Browser | null} */
@@ -25,6 +25,21 @@ export function isBrowserConnected() {
 }
 
 /**
+ * Applies mobile emulation settings to the page
+ * @param {import('puppeteer').Page} page - The page to configure
+ * @returns {Promise<void>}
+ */
+async function applyMobileEmulation(page) {
+  // Set mobile viewport
+  await page.setViewport(config.mobile.viewport);
+
+  // Set mobile user agent
+  await page.setUserAgent(config.mobile.userAgent);
+
+  console.log("✓ Mobile emulation enabled");
+}
+
+/**
  * Initializes the browser instance by connecting to an existing Chrome
  * @returns {Promise<void>}
  */
@@ -42,6 +57,12 @@ export async function initBrowser() {
   // Use the existing tab instead of creating a new one
   const pages = await browser.pages();
   page = pages[0] || (await browser.newPage());
+
+  // Apply mobile emulation if mobile mode is enabled
+  if (isMobileMode()) {
+    await applyMobileEmulation(page);
+  }
+
   console.log("✓ Connected to Chrome successfully!\n");
 }
 
