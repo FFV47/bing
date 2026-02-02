@@ -43,7 +43,7 @@ export async function generateTerms() {
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
   const ai = new GoogleGenAI({});
 
-  const prompt = `Generate ${config.maxSearches} search terms for a search engine in Portuguese. If possible generate these terms based on google search trending topics for ${currentYear} or after. Put it all in a array of strings.`;
+  const prompt = `Generate ${config.maxSearches} search terms for a search engine in Portuguese. If possible generate these terms based on google search trending topics for ${currentYear} or after. Don't include year in the terms itself if the year is the current year. Put it all in a array of strings.`;
 
   const response = await ai.models.generateContent({
     "model": "gemini-3-flash-preview",
