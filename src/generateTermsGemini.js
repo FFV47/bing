@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -38,7 +38,6 @@ export async function generateTerms() {
   const SearchTermsSchema = z.array(z.string().describe("search term"));
   const jsonSchema = SearchTermsSchema.toJSONSchema();
 
-  const currentYear = new Date().getFullYear();
   const maxSearches = getMaxSearches();
   const modeLabel = isMobileMode() ? "Mobile" : "Desktop";
 
@@ -47,20 +46,67 @@ export async function generateTerms() {
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
   const ai = new GoogleGenAI({});
 
-  const prompt = `Generate ${maxSearches} search terms for a search engine in Portuguese. If possible generate these terms based on google search trending topics for ${currentYear} or after. Don't include year in the terms itself if the year is the current year. Put it all in a array of strings.`;
+  const prompt = `Generate ${maxSearches} realistic search terms in Brazilian Portuguese that a typical user might search for on a search engine.
 
-  const response = await ai.models.generateContent({
-    "model": "gemini-3-flash-preview",
-    "contents": prompt,
-    "config": {
-      "responseMimeType": "application/json",
-      "responseJsonSchema": jsonSchema,
-    },
-  });
+  Requirements:
+  - Each term should be something a real person would genuinely search for
+  - Mix of categories: how-to queries, product/service lookups, factual questions, recipes, health tips, entertainment, sports, technology, travel destinations, and everyday curiosities
+  - Terms should be natural and varied in length
+  - Avoid speculative, fictional, or made-up topics
+  - Do NOT include years or dates in the search terms
+  - Focus on evergreen and practical topics that are always relevant
 
-  const responseText = response.text;
+  Return as a JSON array of strings.`;
+
+  const freeTierModels = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+  const freeTierThinkingModels = ["gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"];
+
+  const freeModels = [...freeTierThinkingModels, ...freeTierModels];
+
+  let responseText;
+  for (const model of freeModels) {
+    try {
+      console.log(`Trying model: ${model}...`);
+
+      const config = {
+        "responseMimeType": "application/json",
+        "responseJsonSchema": jsonSchema,
+      };
+
+      if (freeTierThinkingModels.includes(model)) {
+        config.thinkingConfig = {
+          "thinkingLevel": ThinkingLevel.HIGH,
+        };
+      }
+
+      const response = await ai.models.generateContent({
+        "model": model,
+        "contents": prompt,
+        "config": config,
+      });
+
+      responseText = response.text;
+      if (!responseText) {
+        console.error(`No response text received from model ${model}, trying next...`);
+        continue;
+      }
+
+      console.log(`Successfully got response from model: ${model}`);
+      break;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      const jsonError = parseJSON(errorMessage);
+      if (typeof jsonError === "object" && jsonError !== null) {
+        console.error(`Error with model ${model}:`, JSON.stringify(jsonError, null, 2));
+      } else {
+        console.error(`Error with model ${model}:`, errorMessage);
+      }
+    }
+  }
+
   if (!responseText) {
-    console.error("No response text received from Gemini API");
+    console.error("All models failed to generate search terms");
     return;
   }
 
@@ -77,4 +123,12 @@ export async function generateTerms() {
   console.log("Generated search terms:");
   console.log(searchTerms);
   await writeFile(SEARCH_TERMS_PATH, searchTerms);
+}
+
+function parseJSON(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }

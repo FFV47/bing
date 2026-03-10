@@ -34,6 +34,7 @@ export async function performSearchWithRetry(query) {
         errorMessage.includes("Session closed") ||
         errorMessage.includes("Connection closed") ||
         errorMessage.includes("Browser page not initialized") ||
+        errorMessage.includes("timed out") ||
         !isBrowserConnected();
 
       if (isDisconnectedError && attempt < MAX_RETRY_ATTEMPTS) {

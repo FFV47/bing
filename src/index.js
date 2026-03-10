@@ -3,7 +3,37 @@ import { closeBrowser, initBrowser } from "./browser.js";
 import { config, getMaxSearches, isMobileMode } from "./config.js";
 import { SEARCH_TERMS_PATH } from "./generateTermsGemini.js";
 import { getSearchTerm, performSearchWithRetry } from "./search.js";
-import { formatInterval, getRandomInterval } from "./utils.js";
+import { formatInterval, getRandomInterval, sleep } from "./utils.js";
+
+const RECOVERY_DELAY_MS = 30_000;
+const MAX_RECOVERY_ATTEMPTS = 40;
+
+/**
+ * Attempts a search with recovery for extended Chrome unresponsiveness (e.g. screen off on Wayland).
+ * Falls back to a longer retry loop if the standard retry logic fails.
+ * @param {string} term - The search query
+ * @returns {Promise<boolean>} True if search eventually succeeded
+ */
+async function performSearchWithRecovery(term) {
+  const success = await performSearchWithRetry(term);
+  if (success) return true;
+
+  console.log("\n⏸  Search failed — Chrome may be unresponsive (screen off?).");
+  console.log("→ Entering recovery mode. Will keep retrying...\n");
+
+  for (let i = 1; i <= MAX_RECOVERY_ATTEMPTS; i++) {
+    console.log(`→ Recovery attempt ${i}/${MAX_RECOVERY_ATTEMPTS} — waiting ${RECOVERY_DELAY_MS / 1000}s...`);
+    await sleep(RECOVERY_DELAY_MS);
+
+    const recovered = await performSearchWithRetry(term);
+    if (recovered) {
+      console.log("✓ Recovery successful!\n");
+      return true;
+    }
+  }
+
+  return false;
+}
 
 try {
   await main();
@@ -54,11 +84,11 @@ async function main() {
   // Perform initial search immediately
   const { term: initialTerm, nextIndex: newIndex } = getSearchTerm(searchTerms, termIndex);
   termIndex = newIndex;
-  const initialSuccess = await performSearchWithRetry(initialTerm);
+  const initialSuccess = await performSearchWithRecovery(initialTerm);
   if (initialSuccess) {
     searchCount++;
   } else {
-    console.log("\nSearch failed after all retry attempts. Shutting down...");
+    console.log("\nSearch failed after all recovery attempts. Shutting down...");
     await closeBrowser();
     process.exit(1);
   }
@@ -135,12 +165,12 @@ async function main() {
 
       const { term, nextIndex } = getSearchTerm(searchTerms, termIndex);
       termIndex = nextIndex;
-      const success = await performSearchWithRetry(term);
+      const success = await performSearchWithRecovery(term);
       if (success) {
         searchCount++;
         await scheduleNextSearch();
       } else {
-        console.log("\nSearch failed after all retry attempts. Shutting down...");
+        console.log("\nSearch failed after all recovery attempts. Shutting down...");
         console.log(`Total searches performed: ${searchCount}`);
         await closeBrowser();
         process.exit(1);

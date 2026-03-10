@@ -24,9 +24,9 @@ else
   MODE_LABEL="Desktop"
 fi
 
-echo "╔════════════════════════════════════════════╗"
+echo "╔═════════════════════════════════════════════╗"
 echo "║   Bing Auto-Search Startup Script ($MODE_LABEL) ║"
-echo "╚════════════════════════════════════════════╝"
+echo "╚═════════════════════════════════════════════╝"
 echo ""
 
 # Generate search terms first
@@ -118,7 +118,21 @@ echo ""
 
 # Change to the script's directory and run the app
 cd "$(dirname "$0")" || exit
-npm start -- $MOBILE_ARG
+
+# Inhibit idle/screen-off while the app runs (Wayland/systemd)
+if command -v systemd-inhibit &>/dev/null; then
+  echo "→ Screen idle inhibitor active (systemd-inhibit)"
+  systemd-inhibit --what=idle --who="bing-auto-search" --why="Automated Bing searches in progress" --mode=block \
+    npm start -- $MOBILE_ARG
+elif command -v gnome-session-inhibit &>/dev/null; then
+  echo "→ Screen idle inhibitor active (gnome-session-inhibit)"
+  gnome-session-inhibit --inhibit idle --reason "Automated Bing searches in progress" \
+    npm start -- $MOBILE_ARG
+else
+  echo "⚠ Warning: No idle inhibitor found. Screen may turn off during execution."
+  echo "  Install systemd or run: gsettings set org.gnome.desktop.session idle-delay 0"
+  npm start -- $MOBILE_ARG
+fi
 
 # When the app exits, optionally close Chrome
 echo ""

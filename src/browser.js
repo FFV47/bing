@@ -52,6 +52,7 @@ export async function initBrowser() {
   browser = await puppeteer.connect({
     "browserURL": debugUrl,
     "defaultViewport": null,
+    "protocolTimeout": 60_000,
   });
 
   // Use the existing tab instead of creating a new one
