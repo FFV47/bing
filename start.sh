@@ -45,7 +45,13 @@ while [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; do
 
   node "$SCRIPT_DIR/src/generateTermsGemini.js" $MOBILE_ARG
 
-  if [ -f "$SCRIPT_DIR/src/generated/search-terms.json" ]; then
+  if [ "$MOBILE_MODE" = true ]; then
+    TERMS_FILE="$SCRIPT_DIR/src/generated/search-terms-mobile.json"
+  else
+    TERMS_FILE="$SCRIPT_DIR/src/generated/search-terms-desktop.json"
+  fi
+
+  if [ -f "$TERMS_FILE" ]; then
     echo "✓ Search terms generated successfully!"
     TERMS_GENERATED=true
     break

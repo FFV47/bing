@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { closeBrowser, initBrowser } from "./browser.js";
 import { config, getMaxSearches, isMobileMode } from "./config.js";
-import { SEARCH_TERMS_PATH } from "./generateTermsGemini.js";
+import { getSearchTermsPath } from "./generateTermsGemini.js";
 import { getSearchTerm, performSearchWithRetry } from "./search.js";
 import { formatInterval, getRandomInterval, sleep } from "./utils.js";
 
@@ -63,7 +63,7 @@ async function main() {
   console.log("\nPress Ctrl+C to stop the application.\n");
   console.log("─".repeat(50) + "\n");
 
-  const searchTerms = JSON.parse(readFileSync(SEARCH_TERMS_PATH, "utf-8").toString());
+  const searchTerms = JSON.parse(readFileSync(getSearchTermsPath(mobileMode), "utf-8").toString());
 
   // Initialize the browser
   try {

@@ -1,6 +1,6 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { unlink, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as z from "zod";
@@ -10,8 +10,17 @@ import { getMaxSearches, isMobileMode } from "./config.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = join(__dirname, "generated");
 
-export const SEARCH_TERMS_PATH = join(__dirname, "generated", "search-terms.json");
-const RAW_RESPONSE_PATH = join(__dirname, "generated", "rawResponse.txt");
+/**
+ * Returns the search terms file path for the given mode.
+ * @param {boolean} mobile
+ */
+export function getSearchTermsPath(mobile) {
+  const suffix = mobile ? "mobile" : "desktop";
+  return join(GENERATED_DIR, `search-terms-${suffix}.json`);
+}
+
+export const SEARCH_TERMS_PATH = getSearchTermsPath(isMobileMode());
+const RAW_RESPONSE_PATH = join(GENERATED_DIR, "rawResponse.txt");
 
 // Run only when executed directly (e.g., `node generateTermsGemini.js`)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -26,12 +35,17 @@ export async function generateTerms() {
     mkdirSync(GENERATED_DIR);
   }
 
-  if (existsSync(SEARCH_TERMS_PATH)) {
-    await unlink(SEARCH_TERMS_PATH);
-  }
+  const termsPath = getSearchTermsPath(isMobileMode());
 
-  if (existsSync(RAW_RESPONSE_PATH)) {
-    await unlink(RAW_RESPONSE_PATH);
+  // Load last generated terms (if any) to avoid duplicates
+  let lastTerms = [];
+  if (existsSync(termsPath)) {
+    try {
+      lastTerms = JSON.parse(readFileSync(termsPath, "utf-8"));
+      if (!Array.isArray(lastTerms)) lastTerms = [];
+    } catch {
+      lastTerms = [];
+    }
   }
 
   // json schema for validation
@@ -42,9 +56,17 @@ export async function generateTerms() {
   const modeLabel = isMobileMode() ? "Mobile" : "Desktop";
 
   console.log(`Generating ${maxSearches} search terms for ${modeLabel} mode...`);
+  if (lastTerms.length > 0) {
+    console.log(`→ ${lastTerms.length} previous terms loaded — new terms will be different.`);
+  }
 
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
   const ai = new GoogleGenAI({});
+
+  const lastTermsBlock =
+    lastTerms.length > 0
+      ? `\n\n  IMPORTANT: Do NOT repeat any of the following previously used terms (or very similar variations):\n  ${JSON.stringify(lastTerms)}`
+      : "";
 
   const prompt = `Generate ${maxSearches} realistic search terms in Brazilian Portuguese that a typical user might search for on a search engine.
 
@@ -54,7 +76,7 @@ export async function generateTerms() {
   - Terms should be natural and varied in length
   - Avoid speculative, fictional, or made-up topics
   - Do NOT include years or dates in the search terms
-  - Focus on evergreen and practical topics that are always relevant
+  - Focus on evergreen and practical topics that are always relevant${lastTermsBlock}
 
   Return as a JSON array of strings.`;
 
@@ -122,7 +144,7 @@ export async function generateTerms() {
 
   console.log("Generated search terms:");
   console.log(searchTerms);
-  await writeFile(SEARCH_TERMS_PATH, searchTerms);
+  await writeFile(termsPath, searchTerms);
 }
 
 function parseJSON(text) {
