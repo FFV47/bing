@@ -18,24 +18,17 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@google/genai": "^1.45.0",
-    "puppeteer": "^24.39.1",
-    "zod": "^4.3.6"
+    "@google/genai": "2.12.0",
+    "puppeteer": "25.3.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@eslint/json": "^1.1.0",
-    "eslint": "^9.39.4",
-    "globals": "^17.4.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.1"
-  },
-  "prettier": {
-    "semi": true,
-    "singleQuote": false,
-    "printWidth": 120,
-    "tabWidth": 2,
-    "trailingComma": "es5",
-    "quoteProps": "preserve"
+    "@eslint/js": "10.0.1",
+    "@eslint/json": "2.0.1",
+    "eslint": "10.7.0",
+    "globals": "17.7.0",
+    "prettier": "3.9.5",
+    "typescript": "7.0.2",
+    "typescript-eslint": "8.64.0"
   }
 }

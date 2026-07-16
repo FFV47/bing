@@ -1,0 +1,12 @@
+ignoreScripts: true
+packageLock: true
+audit: true
+auditLevel: moderate
+fund: false
+strictSsl: true
+saveExact: true
+savePrefix: ''
+binLinks: false
+engineStrict: true
+minimumReleaseAgeExclude:
+  - '@google/genai@2.12.0'

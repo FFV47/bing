@@ -1,4 +1,5 @@
 {
-  "window.zoomLevel": 3.8017840169239308,
-  "editor.mouseWheelScrollSensitivity": 2
+  "editor.mouseWheelScrollSensitivity": 2,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "window.zoomLevel": 1
 }

@@ -81,7 +81,7 @@ export async function generateTerms() {
   Return as a JSON array of strings.`;
 
   const freeTierModels = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
-  const freeTierThinkingModels = ["gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"];
+  const freeTierThinkingModels = ["gemini-3.1-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"];
 
   const freeModels = [...freeTierThinkingModels, ...freeTierModels];
 

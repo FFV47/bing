@@ -9,7 +9,7 @@ export const config = {
   maxIntervalMs: 5 * 60 * 1000,
 
   /** Maximum number of searches (0 = unlimited) */
-  maxSearches: 30,
+  maxSearches: 20,
 
   /** Bing homepage URL */
   bingBaseUrl: "https://www.bing.com",
