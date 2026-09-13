@@ -55,3 +55,19 @@ export function isMobileMode() {
 export function getMaxSearches() {
   return isMobileMode() ? config.mobile.maxSearches : config.maxSearches;
 }
+
+/**
+ * Resolves the Gemini API key from the environment.
+ *
+ * Mirrors the lookup order of `@google/genai` (GOOGLE_API_KEY wins over
+ * GEMINI_API_KEY) so this check can never disagree with the SDK.
+ *
+ * @returns {string | null} The key, or null when none is set
+ */
+export function getGeminiApiKey() {
+  for (const name of ["GOOGLE_API_KEY", "GEMINI_API_KEY"]) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return null;
+}

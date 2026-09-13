@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { closeBrowser, initBrowser } from "./browser.js";
 import { config, getMaxSearches, isMobileMode } from "./config.js";
 import { getSearchTermsPath } from "./generateTermsGemini.js";
@@ -63,7 +63,16 @@ async function main() {
   console.log("\nPress Ctrl+C to stop the application.\n");
   console.log("─".repeat(50) + "\n");
 
-  const searchTerms = JSON.parse(readFileSync(getSearchTermsPath(mobileMode), "utf-8").toString());
+  const termsPath = getSearchTermsPath(mobileMode);
+  if (!existsSync(termsPath)) {
+    console.error(`✗ No search terms found at ${termsPath}\n`);
+    console.error("Generate them first (requires GEMINI_API_KEY to be set):");
+    console.error(`  node src/generateTermsGemini.js${mobileMode ? " --mobile" : ""}`);
+    console.error("\nOr run ./start.sh, which generates terms and launches Chrome for you.\n");
+    process.exit(1);
+  }
+
+  const searchTerms = JSON.parse(readFileSync(termsPath, "utf-8").toString());
 
   // Initialize the browser
   try {

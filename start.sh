@@ -29,6 +29,24 @@ echo "║   Bing Auto-Search Startup Script ($MODE_LABEL) ║"
 echo "╚═════════════════════════════════════════════╝"
 echo ""
 
+# Exit code the term generator uses for configuration errors (EX_CONFIG)
+EXIT_CONFIG_ERROR=78
+
+# Verify the Gemini API key before doing any work. The @google/genai SDK reads
+# GOOGLE_API_KEY first, then GEMINI_API_KEY.
+if [ -z "$GOOGLE_API_KEY" ] && [ -z "$GEMINI_API_KEY" ]; then
+  echo "✗ Error: GEMINI_API_KEY is not set."
+  echo ""
+  echo "  A Google Gemini API key is required to generate search terms."
+  echo "  1. Create a key at https://aistudio.google.com/apikey"
+  echo "  2. Export it before running this script:"
+  echo "       export GEMINI_API_KEY=\"your-key-here\""
+  echo "  3. To persist it, add that line to ~/.bashrc (or ~/.zshrc) and reopen the shell."
+  echo ""
+  echo "  Aborting operation."
+  exit 1
+fi
+
 # Generate search terms first
 echo "→ Generating fresh search terms using Gemini AI..."
 
@@ -44,6 +62,13 @@ while [ $TERM_ATTEMPT -lt $MAX_TERM_ATTEMPTS ]; do
   echo "Attempt $TERM_ATTEMPT of $MAX_TERM_ATTEMPTS..."
 
   node "$SCRIPT_DIR/src/generateTermsGemini.js" $MOBILE_ARG
+  GENERATE_STATUS=$?
+
+  # A misconfiguration will not fix itself on retry — abort immediately.
+  if [ $GENERATE_STATUS -eq $EXIT_CONFIG_ERROR ]; then
+    echo "  Aborting operation."
+    exit 1
+  fi
 
   if [ "$MOBILE_MODE" = true ]; then
     TERMS_FILE="$SCRIPT_DIR/src/generated/search-terms-mobile.json"

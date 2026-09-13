@@ -48,6 +48,18 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
    pnpm install
    ```
 
+3. Set your Gemini API key:
+
+   ```bash
+   export GEMINI_API_KEY="your-key-here"
+   ```
+
+   Create a key at [Google AI Studio](https://aistudio.google.com/apikey). Add the
+   line to `~/.bashrc` (or `~/.zshrc`) to persist it across shells.
+
+   The application refuses to start without a key — it will not attempt any API
+   calls and will tell you how to set one.
+
 ## Usage
 
 ### Quick Start (Recommended)
@@ -81,9 +93,10 @@ Edit `src/config.js` to customize the behavior:
 
 ### Environment Variables
 
-| Variable         | Required | Description                                           |
-| ---------------- | -------- | ----------------------------------------------------- |
-| `GEMINI_API_KEY` | Yes      | Your Google Gemini API key for search term generation |
+| Variable         | Required | Description                                                         |
+| ---------------- | -------- | ------------------------------------------------------------------- |
+| `GEMINI_API_KEY` | Yes      | Your Google Gemini API key for search term generation               |
+| `GOOGLE_API_KEY` | No       | Alternative to `GEMINI_API_KEY`; takes precedence when both are set |
 
 ## Scripts
 

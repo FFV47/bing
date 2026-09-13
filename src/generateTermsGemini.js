@@ -4,7 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as z from "zod";
-import { getMaxSearches, isMobileMode } from "./config.js";
+import { getGeminiApiKey, getMaxSearches, isMobileMode } from "./config.js";
 
 // Get the directory of this script
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -22,15 +22,59 @@ export function getSearchTermsPath(mobile) {
 export const SEARCH_TERMS_PATH = getSearchTermsPath(isMobileMode());
 const RAW_RESPONSE_PATH = join(GENERATED_DIR, "rawResponse.txt");
 
+/** Exit code for configuration errors (EX_CONFIG, sysexits.h) */
+export const EXIT_CONFIG_ERROR = 78;
+
+/**
+ * Thrown when no Gemini API key is present in the environment.
+ *
+ * The @google/genai SDK only warns about a missing key and then falls back to
+ * Application Default Credentials, which fails much later with a confusing
+ * "Could not load the default credentials" error. We stop before that happens.
+ */
+export class MissingApiKeyError extends Error {
+  constructor() {
+    super(
+      "GEMINI_API_KEY is not set.\n\n" +
+        "  A Google Gemini API key is required to generate search terms.\n" +
+        "  1. Create a key at https://aistudio.google.com/apikey\n" +
+        "  2. Export it before running the app:\n" +
+        '       export GEMINI_API_KEY="your-key-here"\n' +
+        "  3. To persist it, add that line to ~/.bashrc (or ~/.zshrc) and reopen the shell.",
+    );
+    this.name = "MissingApiKeyError";
+  }
+}
+
 // Run only when executed directly (e.g., `node generateTermsGemini.js`)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await generateTerms();
+  try {
+    const generated = await generateTerms();
+    if (!generated) {
+      process.exit(1);
+    }
+  } catch (error) {
+    if (error instanceof MissingApiKeyError) {
+      console.error(`\n✗ ${error.message}\n`);
+      process.exit(EXIT_CONFIG_ERROR);
+    }
+    throw error;
+  }
 }
 
 /**
  * Generates search terms using the Gemini API and saves them to a JSON file.
+ *
+ * @returns {Promise<boolean>} True when terms were generated and written
+ * @throws {MissingApiKeyError} When no Gemini API key is configured
  */
 export async function generateTerms() {
+  // Validate configuration before touching the filesystem or the network.
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new MissingApiKeyError();
+  }
+
   if (!existsSync(GENERATED_DIR)) {
     mkdirSync(GENERATED_DIR);
   }
@@ -60,8 +104,7 @@ export async function generateTerms() {
     console.log(`→ ${lastTerms.length} previous terms loaded — new terms will be different.`);
   }
 
-  // The client gets the API key from the environment variable `GEMINI_API_KEY`.
-  const ai = new GoogleGenAI({});
+  const ai = new GoogleGenAI({ apiKey });
 
   const lastTermsBlock =
     lastTerms.length > 0
@@ -126,7 +169,7 @@ export async function generateTerms() {
 
   if (!responseText) {
     console.error("All models failed to generate search terms");
-    return;
+    return false;
   }
 
   writeFileSync(RAW_RESPONSE_PATH, responseText);
@@ -134,7 +177,7 @@ export async function generateTerms() {
   const schemaResult = SearchTermsSchema.safeParse(JSON.parse(responseText));
   if (!schemaResult.success) {
     console.error("Response validation failed:", schemaResult.error);
-    return;
+    return false;
   }
 
   const searchTerms = JSON.stringify(schemaResult.data, null, 2);
@@ -142,6 +185,8 @@ export async function generateTerms() {
   console.log("Generated search terms:");
   console.log(searchTerms);
   await writeFile(termsPath, searchTerms);
+
+  return true;
 }
 
 function parseJSON(text) {
