@@ -145,8 +145,9 @@ const templates = [
 
 /**
  * Pick a random element from an array
- * @param {string[]} array
- * @returns {string}
+ * @template T
+ * @param {T[]} array
+ * @returns {T}
  */
 function pick(array) {
   return array[Math.floor(Math.random() * array.length)];

@@ -6,13 +6,12 @@ import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig(
-  js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
   {
+    files: ["**/*.{js,mjs,cjs}"],
+    extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     plugins: {
       "@typescript-eslint": tseslint.plugin,
     },
-    files: ["**/*.{js,mjs,cjs}"],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
       parser: tseslint.parser,
@@ -31,6 +30,7 @@ export default defineConfig(
   },
   {
     files: ["**/*.json"],
+    language: "json/json",
     ...json.configs.recommended,
   },
   {

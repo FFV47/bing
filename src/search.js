@@ -134,7 +134,7 @@ async function performSearch(query) {
     await page.waitForSelector(searchBoxSelector, { timeout: 10000 });
 
     // Clear any existing text in the search box
-    await page.click(searchBoxSelector, { clickCount: 3 });
+    await page.click(searchBoxSelector, { count: 3 });
     await page.keyboard.press("Backspace");
 
     // Type the search query with a human-like delay

@@ -1,12 +1,68 @@
+# ─── Security configuration (pnpm 12) ──────────────────────────────────────
+# Settings live here, not .npmrc, since pnpm 10. pnpm 12 validates them
+# against a typed schema: wrongly-shaped keys are rejected, unknown keys warn.
+
+# ─── Build-script security ────────────────────────────────────────────────
+# Don't run lifecycle scripts of this project or its dependencies.
 ignoreScripts: true
-packageLock: true
-audit: true
-auditLevel: moderate
-fund: false
-strictSsl: true
-saveExact: true
-savePrefix: ''
-binLinks: false
-engineStrict: true
+
+# Reviewed decisions for every dependency that ships a build script.
+# All denied: this app talks to a system Chrome over CDP (see src/browser.js),
+# so puppeteer's Chromium download is not needed. Listing them explicitly
+# marks them "reviewed" so strictDepBuilds passes.
+# Run `pnpm ignored-builds` to see packages awaiting a decision.
+allowBuilds:
+  '@google/genai': false
+  protobufjs: false
+  puppeteer: false
+
+# Never run every dependency's build scripts unreviewed.
+dangerouslyAllowAllBuilds: false
+
+# Fail the install if any dependency has an unreviewed build script.
+strictDepBuilds: true
+
+# Refuse to run scripts against an out-of-date node_modules.
+# Use `install` instead of `error` if you'd rather it auto-install.
+verifyDepsBeforeRun: error
+
+# ─── Supply-chain / resolution ────────────────────────────────────────────
+# Wait 7 days after a version is published before installing it, so a
+# compromised release has time to be caught and unpublished.
+minimumReleaseAge: 10080
+
+# Fail rather than silently falling back to an older version.
+minimumReleaseAgeStrict: true
+
+# Versions allowed to bypass the cooldown above.
 minimumReleaseAgeExclude:
   - '@google/genai@2.12.0'
+
+# Drop stale exclusions automatically so they don't linger as permanent holes.
+minimumReleaseAgeExcludePrune: true
+
+# Fail if a package's trust level drops compared to its previous releases.
+trustPolicy: no-downgrade
+trustPolicyExcludePrune: true
+
+# Only direct dependencies may come from git/tarball sources, never transitives.
+blockExoticSubdeps: true
+
+# Always verify the lockfile against supply-chain policies.
+trustLockfile: false
+
+# ─── Store integrity ──────────────────────────────────────────────────────
+# Re-check file contents before linking from the store into node_modules.
+verifyStoreIntegrity: true
+strictStorePkgContentCheck: true
+
+# ─── Install / resolution hygiene ─────────────────────────────────────────
+lockfile: true
+saveExact: true
+savePrefix: ''
+engineStrict: true
+
+# `pnpm audit` reports advisories at this severity or above.
+# This does NOT audit on install - run `pnpm audit` in CI.
+audit:
+  level: moderate
