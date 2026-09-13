@@ -3,10 +3,10 @@
  */
 export const config = {
   /** Minimum interval between searches in milliseconds */
-  minIntervalMs: 3 * 60 * 1000,
+  minIntervalMs: 1 * 60 * 1000,
 
   /** Maximum interval between searches in milliseconds */
-  maxIntervalMs: 5 * 60 * 1000,
+  maxIntervalMs: 2 * 60 * 1000,
 
   /** Maximum number of searches (0 = unlimited) */
   maxSearches: 20,

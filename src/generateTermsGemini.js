@@ -80,10 +80,7 @@ export async function generateTerms() {
 
   Return as a JSON array of strings.`;
 
-  const freeTierModels = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
-  const freeTierThinkingModels = ["gemini-3.1-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"];
-
-  const freeModels = [...freeTierThinkingModels, ...freeTierModels];
+  const freeModels = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"];
 
   let responseText;
   for (const model of freeModels) {
@@ -95,7 +92,7 @@ export async function generateTerms() {
         "responseJsonSchema": jsonSchema,
       };
 
-      if (freeTierThinkingModels.includes(model)) {
+      if (freeModels.includes(model)) {
         config.thinkingConfig = {
           "thinkingLevel": ThinkingLevel.HIGH,
         };
