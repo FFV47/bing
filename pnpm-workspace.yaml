@@ -34,6 +34,11 @@ minimumReleaseAgeExcludePrune: true
 
 # Fail if a package's trust level drops compared to its previous releases.
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Chrome team moved chromium-bidi 157+ from GitHub Actions OIDC to their
+  # official release publisher (chrome-devtools-npm@google.com). Updating off
+  # chromium-bidi@17.0.2 removes the vulnerable zod@3 dependency (GHSA-mrhx-c7xc-m3w5).
+  - chromium-bidi@157.0.8090-0
 trustPolicyExcludePrune: true
 
 # Only direct dependencies may come from git/tarball sources, never transitives.
