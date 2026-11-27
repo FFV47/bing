@@ -1,7 +1,5 @@
 {
-  "editor.mouseWheelScrollSensitivity": 2,
   "js/ts.tsdk.path": "node_modules/typescript/lib",
-  "window.zoomLevel": 1,
   "github.copilot.chat.commitMessageGeneration.instructions": [
     {
       "text": "Escreva a mensagem de commit em português"

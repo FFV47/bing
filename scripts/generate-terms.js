@@ -1,64 +1,41 @@
 #!/usr/bin/env node
 
 /**
- * Script to generate random search terms and update config.js
- * Run with: node scripts/generate-terms.js
+ * Offline fallback script to generate random English search terms and write
+ * them to `src/generated/search-terms-{desktop|mobile}.json`.
+ *
+ * Run with:
+ *   node scripts/generate-terms.js
+ *   node scripts/generate-terms.js --mobile
  */
 
-import { readFileSync, writeFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { config } from "../src/config.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import { config, getMaxSearches, isMobileMode } from "../src/config.js";
+import { GENERATED_DIR, getSearchTermsPath, resolveTermCount } from "../src/generateTermsGemini.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Base word categories to combine for search terms
 const wordBases = {
   adjectives: [
     "best",
     "top",
-    "latest",
-    "new",
     "popular",
-    "amazing",
     "easy",
     "quick",
     "simple",
     "free",
-    "cheap",
     "affordable",
-    "professional",
     "beginner",
-    "advanced",
     "modern",
     "classic",
-    "traditional",
-    "innovative",
-    "creative",
     "healthy",
-    "delicious",
-    "beautiful",
-    "stunning",
-    "exciting",
-    "interesting",
-    "useful",
     "practical",
     "essential",
-    "important",
   ],
   topics: [
     "recipes",
     "tips",
     "ideas",
-    "trends",
-    "news",
-    "reviews",
     "guide",
     "tutorial",
-    "tricks",
-    "hacks",
-    "secrets",
     "methods",
     "techniques",
     "strategies",
@@ -66,7 +43,6 @@ const wordBases = {
     "benefits",
     "facts",
     "history",
-    "stories",
     "examples",
   ],
   subjects: [
@@ -78,73 +54,39 @@ const wordBases = {
     "music",
     "movies",
     "books",
-    "games",
-    "sports",
+    "board games",
     "technology",
-    "fashion",
-    "art",
-    "design",
+    "interior design",
     "architecture",
-    "science",
-    "nature",
-    "animals",
-    "cars",
-    "motorcycles",
+    "astronomy",
     "camping",
     "hiking",
     "cycling",
-    "swimming",
     "running",
     "yoga",
     "meditation",
-    "painting",
-    "drawing",
-    "crafts",
     "woodworking",
     "electronics",
     "programming",
-    "marketing",
-    "business",
-    "finance",
-    "investing",
-    "cryptocurrency",
-    "real estate",
-    "interior design",
+    "personal finance",
+    "home organization",
   ],
-  timeframes: ["2025", "today", "this week", "this year", "winter", "summer", "spring", "fall", "weekend", "holiday"],
-  actions: ["how to", "ways to", "learn", "discover", "explore", "find", "understand", "improve", "master", "start"],
-  places: ["home", "outdoor", "beach", "mountain", "city", "country", "Europe", "Asia", "America", "local"],
-  extras: [
-    "for beginners",
-    "for experts",
-    "for kids",
-    "for adults",
-    "for families",
-    "on a budget",
-    "without equipment",
-    "at home",
-    "online",
-    "step by step",
-  ],
+  actions: ["how to start", "ways to improve", "how to learn", "how to organize", "how to choose"],
+  places: ["home", "outdoor", "beach", "mountain", "city", "Europe", "Asia", "South America"],
+  extras: ["for beginners", "for families", "on a budget", "without equipment", "at home", "step by step"],
 };
 
-// Templates for generating search terms
 const templates = [
   () => `${pick(wordBases.adjectives)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)}`,
-  () =>
-    `${pick(wordBases.adjectives)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)} ${pick(wordBases.timeframes)}`,
   () => `${pick(wordBases.actions)} ${pick(wordBases.subjects)}`,
   () => `${pick(wordBases.actions)} ${pick(wordBases.subjects)} ${pick(wordBases.extras)}`,
-  () => `${pick(wordBases.subjects)} ${pick(wordBases.topics)} ${pick(wordBases.timeframes)}`,
-  () => `${pick(wordBases.adjectives)} ${pick(wordBases.places)} ${pick(wordBases.subjects)}`,
+  () => `${pick(wordBases.subjects)} ${pick(wordBases.topics)} ${pick(wordBases.extras)}`,
+  () => `${pick(wordBases.adjectives)} ${pick(wordBases.places)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)}`,
   () => `${pick(wordBases.subjects)} ${pick(wordBases.extras)}`,
-  () => `${pick(wordBases.actions)} ${pick(wordBases.adjectives)} ${pick(wordBases.subjects)}`,
-  () => `${pick(wordBases.places)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)}`,
-  () => `${pick(wordBases.adjectives)} ${pick(wordBases.topics)} ${pick(wordBases.extras)}`,
 ];
 
 /**
- * Pick a random element from an array
+ * Picks a random element from an array.
  * @template T
  * @param {T[]} array
  * @returns {T}
@@ -154,57 +96,39 @@ function pick(array) {
 }
 
 /**
- * Generate unique random search terms
- * @param {number} count - Number of terms to generate
+ * Generates unique random search terms.
+ * @param {number} count
  * @returns {string[]}
  */
 function generateSearchTerms(count) {
+  /** @type {Set<string>} */
   const terms = new Set();
   let attempts = 0;
-  const maxAttempts = count * 10;
+  const maxAttempts = count * 20;
 
   while (terms.size < count && attempts < maxAttempts) {
-    const template = pick(templates);
-    const term = template();
-    terms.add(term);
+    terms.add(pick(templates)());
     attempts++;
   }
 
   return Array.from(terms);
 }
 
-/**
- * Update the config.js file with new search terms
- * @param {string[]} terms
- */
-function updateConfigFile(terms) {
-  const configPath = join(__dirname, "..", "src", "config.js");
-  let configContent = readFileSync(configPath, "utf-8");
+const mobileMode = isMobileMode();
+const termCount = resolveTermCount(getMaxSearches(config, mobileMode), config.defaultTermCount);
+const outputPath = getSearchTermsPath(mobileMode);
+const modeLabel = mobileMode ? "Mobile" : "Desktop";
 
-  // Create the new searchTerms array string
-  const termsString = terms.map((term) => `    "${term}"`).join(",\n");
+console.log(`Generating ${termCount} offline English search terms for ${modeLabel} mode...\n`);
 
-  // Replace the searchTerms array using regex
-  const searchTermsRegex = /searchTerms:\s*\[[\s\S]*?\]/;
-  const newSearchTerms = `searchTerms: [\n${termsString},\n  ]`;
-
-  configContent = configContent.replace(searchTermsRegex, newSearchTerms);
-
-  writeFileSync(configPath, configContent, "utf-8");
-}
-
-// Main execution
-const TERM_COUNT = config.maxSearches || 30;
-
-console.log(`Generating ${TERM_COUNT} random search terms...\n`);
-
-const searchTerms = generateSearchTerms(TERM_COUNT);
+const searchTerms = generateSearchTerms(termCount);
 
 console.log("Generated terms:");
 searchTerms.forEach((term, index) => {
   console.log(`  ${index + 1}. ${term}`);
 });
 
-updateConfigFile(searchTerms);
+await mkdir(GENERATED_DIR, { recursive: true });
+await writeFile(outputPath, `${JSON.stringify(searchTerms, null, 2)}\n`, "utf-8");
 
-console.log(`\n✓ Updated config.js with ${searchTerms.length} search terms!`);
+console.log(`\n✓ Saved ${searchTerms.length} search terms to ${outputPath}`);

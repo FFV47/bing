@@ -1,189 +1,104 @@
 #!/usr/bin/env node
 
 /**
- * Script to generate random search terms in Brazilian Portuguese and update config.js
- * Run with: node scripts/generate-terms-ptbr.js
+ * Offline fallback script to generate natural Brazilian Portuguese search terms
+ * and write them to `src/generated/search-terms-{desktop|mobile}.json`.
+ *
+ * Run with:
+ *   node scripts/generate-terms-ptbr.js
+ *   node scripts/generate-terms-ptbr.js --mobile
  */
 
-import { readFileSync, writeFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { config } from "../src/config.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import { config, getMaxSearches, isMobileMode } from "../src/config.js";
+import { GENERATED_DIR, getSearchTermsPath, resolveTermCount } from "../src/generateTermsGemini.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Base word categories in PT-BR to combine for search terms
 const wordBases = {
-  adjectives: [
-    "melhores",
-    "principais",
-    "últimas",
-    "novas",
-    "populares",
-    "incríveis",
-    "fáceis",
-    "rápidas",
-    "simples",
-    "gratuitas",
-    "baratas",
-    "acessíveis",
-    "profissionais",
-    "iniciantes",
-    "avançadas",
-    "modernas",
-    "clássicas",
-    "tradicionais",
-    "inovadoras",
-    "criativas",
-    "saudáveis",
-    "deliciosas",
-    "bonitas",
-    "impressionantes",
-    "emocionantes",
-    "interessantes",
-    "úteis",
-    "práticas",
-    "essenciais",
-    "importantes",
+  recipes: [
+    "pão de queijo",
+    "bolo de cenoura",
+    "panqueca de carne moída",
+    "frango xadrez",
+    "lasanha à bolonhesa",
+    "pudim de leite condensado",
+    "risoto de cogumelos",
+    "torta de frango",
+    "feijão tropeiro",
+    "mousse de maracujá",
+    "macarrão ao molho branco",
+    "escondidinho de carne seca",
   ],
-  topics: [
-    "receitas",
-    "dicas",
-    "ideias",
-    "tendências",
-    "notícias",
-    "avaliações",
-    "guia",
-    "tutorial",
-    "truques",
-    "macetes",
-    "segredos",
-    "métodos",
-    "técnicas",
-    "estratégias",
-    "soluções",
-    "benefícios",
-    "curiosidades",
-    "história",
-    "histórias",
-    "exemplos",
+  howToTasks: [
+    "organizar finanças pessoais",
+    "aprender inglês sozinho",
+    "cuidar de plantas em apartamento",
+    "fazer um currículo simples",
+    "melhorar a qualidade do sono",
+    "economizar energia elétrica em casa",
+    "limpar tela de notebook",
+    "escolher um bom colchão",
+    "começar a correr do zero",
+    "tirar manchas de roupa branca",
+    "trocar a resistência do chuveiro",
+    "fazer backup de fotos no celular",
   ],
-  subjects: [
-    "culinária",
-    "viagem",
-    "fitness",
+  studySubjects: [
     "fotografia",
     "jardinagem",
-    "música",
-    "filmes",
-    "livros",
-    "jogos",
-    "esportes",
-    "tecnologia",
-    "moda",
-    "arte",
-    "design",
-    "arquitetura",
-    "ciência",
-    "natureza",
-    "animais",
-    "carros",
-    "motos",
-    "camping",
-    "trilhas",
-    "ciclismo",
-    "natação",
-    "corrida",
-    "yoga",
-    "meditação",
-    "pintura",
-    "desenho",
-    "artesanato",
-    "marcenaria",
-    "eletrônica",
     "programação",
-    "marketing",
-    "negócios",
-    "finanças",
+    "culinária",
     "investimentos",
-    "criptomoedas",
-    "imóveis",
-    "decoração",
+    "marcenaria",
+    "design de interiores",
+    "corrida de rua",
+    "meditação",
+    "ciclismo",
+    "eletrônica básica",
+    "desenho artístico",
   ],
-  timeframes: [
-    "2025",
-    "hoje",
-    "esta semana",
-    "este ano",
-    "inverno",
-    "verão",
-    "primavera",
-    "outono",
-    "fim de semana",
-    "feriado",
-  ],
-  actions: [
-    "como fazer",
-    "maneiras de",
-    "aprender",
-    "descobrir",
-    "explorar",
-    "encontrar",
-    "entender",
-    "melhorar",
-    "dominar",
-    "começar",
-  ],
-  places: [
-    "em casa",
-    "ao ar livre",
-    "praia",
-    "montanha",
-    "cidade",
-    "campo",
-    "Europa",
-    "Ásia",
-    "Brasil",
-    "local",
-    "São Paulo",
+  destinations: [
+    "Florianópolis",
+    "Gramado",
     "Rio de Janeiro",
-    "Nordeste",
-    "Sul do Brasil",
+    "Curitiba",
+    "Ouro Preto",
+    "Salvador",
+    "Recife",
+    "Belo Horizonte",
+    "Campos do Jordão",
+    "Bonito",
+    "Foz do Iguaçu",
+    "Maceió",
   ],
-  extras: [
-    "para iniciantes",
-    "para especialistas",
-    "para crianças",
-    "para adultos",
-    "para famílias",
-    "com pouco dinheiro",
-    "sem equipamento",
-    "em casa",
-    "online",
-    "passo a passo",
-    "do zero",
-    "rápido e fácil",
+  curiosities: [
+    "por que o céu é azul",
+    "como funciona o micro-ondas",
+    "benefícios de beber água em jejum",
+    "alimentos ricos em vitamina D",
+    "quanto tempo o café dura na geladeira",
+    "diferença entre café arábica e robusta",
+    "como surgiu o cinema",
+    "qual a origem do idioma português",
+    "como funcionam os painéis solares",
+    "por que bocejamos",
   ],
+  audiences: ["para iniciantes", "em casa", "gastando pouco", "passo a passo", "do zero"],
 };
 
-// Templates for generating search terms
 const templates = [
-  () => `${pick(wordBases.adjectives)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)}`,
-  () =>
-    `${pick(wordBases.adjectives)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)} ${pick(wordBases.timeframes)}`,
-  () => `${pick(wordBases.actions)} ${pick(wordBases.subjects)}`,
-  () => `${pick(wordBases.actions)} ${pick(wordBases.subjects)} ${pick(wordBases.extras)}`,
-  () => `${pick(wordBases.subjects)} ${pick(wordBases.topics)} ${pick(wordBases.timeframes)}`,
-  () => `${pick(wordBases.adjectives)} ${pick(wordBases.places)} ${pick(wordBases.subjects)}`,
-  () => `${pick(wordBases.subjects)} ${pick(wordBases.extras)}`,
-  () => `${pick(wordBases.actions)} ${pick(wordBases.adjectives)} ${pick(wordBases.subjects)}`,
-  () => `${pick(wordBases.places)} ${pick(wordBases.subjects)} ${pick(wordBases.topics)}`,
-  () => `${pick(wordBases.adjectives)} ${pick(wordBases.topics)} ${pick(wordBases.extras)}`,
+  () => `receita fácil de ${pick(wordBases.recipes)}`,
+  () => `como fazer ${pick(wordBases.recipes)} caseiro`,
+  () => `como ${pick(wordBases.howToTasks)}`,
+  () => `dicas de ${pick(wordBases.studySubjects)} ${pick(wordBases.audiences)}`,
+  () => `guia de ${pick(wordBases.studySubjects)} ${pick(wordBases.audiences)}`,
+  () => `o que fazer em ${pick(wordBases.destinations)}`,
+  () => `melhores passeios em ${pick(wordBases.destinations)}`,
+  () => `roteiro de fim de semana em ${pick(wordBases.destinations)}`,
+  () => pick(wordBases.curiosities),
 ];
 
 /**
- * Pick a random element from an array
+ * Picks a random element from an array.
  * @template T
  * @param {T[]} array
  * @returns {T}
@@ -193,57 +108,39 @@ function pick(array) {
 }
 
 /**
- * Generate unique random search terms
- * @param {number} count - Number of terms to generate
+ * Generates unique random search terms in Brazilian Portuguese.
+ * @param {number} count
  * @returns {string[]}
  */
 function generateSearchTerms(count) {
+  /** @type {Set<string>} */
   const terms = new Set();
   let attempts = 0;
-  const maxAttempts = count * 10;
+  const maxAttempts = count * 20;
 
   while (terms.size < count && attempts < maxAttempts) {
-    const template = pick(templates);
-    const term = template();
-    terms.add(term);
+    terms.add(pick(templates)());
     attempts++;
   }
 
   return Array.from(terms);
 }
 
-/**
- * Update the config.js file with new search terms
- * @param {string[]} terms
- */
-function updateConfigFile(terms) {
-  const configPath = join(__dirname, "..", "src", "config.js");
-  let configContent = readFileSync(configPath, "utf-8");
+const mobileMode = isMobileMode();
+const termCount = resolveTermCount(getMaxSearches(config, mobileMode), config.defaultTermCount);
+const outputPath = getSearchTermsPath(mobileMode);
+const modeLabel = mobileMode ? "Mobile" : "Desktop";
 
-  // Create the new searchTerms array string
-  const termsString = terms.map((term) => `    "${term}"`).join(",\n");
+console.log(`Gerando ${termCount} termos de busca offline em PT-BR (${modeLabel})...\n`);
 
-  // Replace the searchTerms array using regex
-  const searchTermsRegex = /searchTerms:\s*\[[\s\S]*?\]/;
-  const newSearchTerms = `searchTerms: [\n${termsString},\n  ]`;
-
-  configContent = configContent.replace(searchTermsRegex, newSearchTerms);
-
-  writeFileSync(configPath, configContent, "utf-8");
-}
-
-// Main execution
-const TERM_COUNT = config.maxSearches || 30;
-
-console.log(`Gerando ${TERM_COUNT} termos de busca aleatórios em PT-BR...\n`);
-
-const searchTerms = generateSearchTerms(TERM_COUNT);
+const searchTerms = generateSearchTerms(termCount);
 
 console.log("Termos gerados:");
 searchTerms.forEach((term, index) => {
   console.log(`  ${index + 1}. ${term}`);
 });
 
-updateConfigFile(searchTerms);
+await mkdir(GENERATED_DIR, { recursive: true });
+await writeFile(outputPath, `${JSON.stringify(searchTerms, null, 2)}\n`, "utf-8");
 
-console.log(`\n✓ config.js atualizado com ${searchTerms.length} termos de busca!`);
+console.log(`\n✓ ${searchTerms.length} termos salvos em ${outputPath}`);

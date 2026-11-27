@@ -3,14 +3,13 @@
 ignoreScripts: true
 
 # Reviewed decisions for every dependency that ships a build script.
-# All denied: this app talks to a system Chrome over CDP (see src/browser.js),
-# so puppeteer's Chromium download is not needed. Listing them explicitly
-# marks them "reviewed" so strictDepBuilds passes.
+# All denied: this app talks to a system Chrome over CDP via puppeteer-core
+# (see src/browser.js), so no dependency build scripts are needed.
+# Listing them explicitly marks them "reviewed" so strictDepBuilds passes.
 # Run `pnpm ignored-builds` to see packages awaiting a decision.
 allowBuilds:
   "@google/genai": false
   protobufjs: false
-  puppeteer: false
 
 # Never run every dependency's build scripts unreviewed.
 dangerouslyAllowAllBuilds: false
@@ -35,6 +34,11 @@ minimumReleaseAgeExcludePrune: true
 
 # Fail if a package's trust level drops compared to its previous releases.
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Chrome team moved chromium-bidi 157+ from GitHub Actions OIDC to their
+  # official release publisher (chrome-devtools-npm@google.com). Updating off
+  # chromium-bidi@17.0.2 removes the vulnerable zod@3 dependency (GHSA-mrhx-c7xc-m3w5).
+  - chromium-bidi@157.0.8090-0
 trustPolicyExcludePrune: true
 
 # Only direct dependencies may come from git/tarball sources, never transitives.
