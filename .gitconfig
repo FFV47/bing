@@ -1,0 +1,9 @@
+# Aliases que criam branches no padrão Conventional Branch.
+# Ative uma vez por clone: git config include.path ../.gitconfig
+# Uso: git feature add login page  ->  cria e muda para feature/add-login-page
+# Fonte: https://conventionalbranch.org/enforce/#a-branching-alias
+[alias]
+	feature = "!f() { git switch -c \"feature/$(printf '%s' \"$*\" | tr 'A-Z _' 'a-z--')\"; }; f"
+	bugfix = "!f() { git switch -c \"bugfix/$(printf '%s' \"$*\" | tr 'A-Z _' 'a-z--')\"; }; f"
+	hotfix = "!f() { git switch -c \"hotfix/$(printf '%s' \"$*\" | tr 'A-Z _' 'a-z--')\"; }; f"
+	chore = "!f() { git switch -c \"chore/$(printf '%s' \"$*\" | tr 'A-Z _' 'a-z--')\"; }; f"

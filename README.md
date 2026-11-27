@@ -60,6 +60,16 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
    The application refuses to start without a key — it will not attempt any API
    calls and will tell you how to set one.
 
+4. (Contributors) Enable the project's git hooks and branch aliases. The hooks block direct commits to `main`, and
+   commits and pushes on branches that break the [Conventional Branch](https://conventionalbranch.org/) naming rules.
+   The commit check runs [commit-check](https://github.com/commit-check/commit-check) through `uvx`, so it needs
+   [uv](https://docs.astral.sh/uv/).
+
+   ```bash
+   git config core.hooksPath .githooks
+   git config include.path ../.gitconfig   # git feature add login page -> feature/add-login-page
+   ```
+
 ## Usage
 
 ### Quick Start (Recommended)

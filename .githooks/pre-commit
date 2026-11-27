@@ -1,0 +1,19 @@
+#!/bin/sh
+# Bloqueia commits diretos na main. Use uma branch e abra um PR.
+branch=$(git symbolic-ref --short -q HEAD)
+if [ "$branch" = "main" ]; then
+  echo "Commit direto na main bloqueado. Crie uma branch: git switch -c <nome>" >&2
+  exit 1
+fi
+
+# HEAD destacado (rebase, bisect): não há nome de branch para conferir.
+[ -z "$branch" ] && exit 0
+
+# Confere o nome da branch com o commit-check, configurado em commit-check.toml.
+# Versão fixada e dependências limitadas a pacotes publicados até --exclude-newer,
+# seguindo o minimumReleaseAge de 7 dias do pnpm-workspace.yaml.
+if ! command -v uvx >/dev/null 2>&1; then
+  echo "uvx não encontrado: instale o uv (https://docs.astral.sh/uv/) para rodar o commit-check." >&2
+  exit 1
+fi
+exec uvx --quiet --exclude-newer 2026-11-19 --from commit-check==2.22.0 commit-check --branch
