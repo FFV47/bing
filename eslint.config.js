@@ -21,11 +21,7 @@ export default defineConfig(
       },
     },
     rules: {
-      "@typescript-eslint/no-misused-promises": "off",
-      "@typescript-eslint/no-unsafe-argument": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
     },
   },
   {
@@ -34,6 +30,6 @@ export default defineConfig(
     ...json.configs.recommended,
   },
   {
-    ignores: ["chrome-user-data/**"],
+    ignores: ["chrome-user-data/**", "src/generated/**", "node_modules/**", "dist/**"],
   }
 );

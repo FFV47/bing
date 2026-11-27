@@ -4,11 +4,19 @@
   "description": "Application that opens browser and searches on Bing at determined intervals",
   "main": "src/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
+    "generate": "node src/generateTermsGemini.js",
+    "generate:mobile": "node src/generateTermsGemini.js --mobile",
+    "test": "node --test",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "bing",
@@ -16,10 +24,10 @@
     "automation"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@google/genai": "2.30.0",
-    "puppeteer": "25.14.0",
+    "puppeteer-core": "25.12.0",
     "zod": "4.6.7"
   },
   "devDependencies": {

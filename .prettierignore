@@ -1,0 +1,8 @@
+node_modules
+chrome-user-data
+src/generated
+dist
+pnpm-lock.yaml
+License.txt
+.agents
+.claude

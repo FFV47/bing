@@ -1,7 +1,7 @@
 # Bing Auto-Search
 
 An automation application that opens a browser and performs searches on Bing at random intervals.
-Built with Node.js and Puppeteer, with AI-powered search term generation using Google Gemini.
+Built with Node.js and `puppeteer-core`, with AI-powered search term generation using Google Gemini.
 
 ## Disclaimer
 
@@ -20,18 +20,18 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
 ## Features
 
 - 🔍 Automated Bing searches with randomized intervals
-- 📱 Mobile mode support for earning mobile Bing Rewards points
-- 🤖 AI-powered search term generation using Google Gemini (based on trending topics)
-- ⌨️ Human-like typing simulation
-- 📜 Smooth page scrolling behavior
-- ⚙️ Fully customizable configuration
+- 📱 Mobile mode support (viewport, touch, User-Agent, and User-Agent Client Hints)
+- 🤖 AI-powered evergreen search term generation using Google Gemini with rolling deduplication history
+- ⌨️ Human-like typing simulation with randomized keystroke jitter
+- 📜 Smooth page scrolling resilient to background/screen-off throttling
+- ⚙️ Configurable via defaults, environment variables (`.env`), and CLI flags
 
 ## Prerequisites
 
-- Node.js (v18 or higher recommended)
-- pnpm (or npm/yarn)
+- Node.js `>=22.12.0`
+- pnpm `12+`
 - Google Chrome or Chromium browser
-- Google Gemini API key (set as `GEMINI_API_KEY` environment variable)
+- Google Gemini API key (`GEMINI_API_KEY`, or use the offline fallback scripts)
 
 ## Installation
 
@@ -55,9 +55,10 @@ Built with Node.js and Puppeteer, with AI-powered search term generation using G
    ```
 
    Create a key at [Google AI Studio](https://aistudio.google.com/apikey). Add the
-   line to `~/.bashrc` (or `~/.zshrc`) to persist it across shells.
+   line to `~/.bashrc` (or `~/.zshrc`) to persist it across shells, or place it in a
+   local `.env` file (ignored by Git).
 
-   The application refuses to start without a key — it will not attempt any API
+   The Gemini generator refuses to start without a key — it will not attempt any API
    calls and will tell you how to set one.
 
 4. (Contributors) Enable the project's git hooks and branch aliases. The hooks block direct commits to `main`, and
@@ -80,73 +81,95 @@ Use the included startup script that handles everything automatically:
 ./start.sh
 ```
 
+You can pass CLI options directly through `start.sh` (for example `./start.sh --mobile --mobile-max-searches 15 --port 9222`).
+
 This script will:
 
-1. Close any existing Chrome debug instances
-2. Start Chrome with remote debugging enabled
-3. Generate fresh random search terms
-4. Run the auto-search application
-5. Clean up when finished
+1. Validate `GEMINI_API_KEY` and generate fresh search terms via Gemini AI
+2. Close any existing project debug Chrome instance (`chrome-user-data`)
+3. Start Chrome with remote debugging enabled
+4. Run the auto-search application (with idle inhibition when available)
+5. Stop the Chrome instance cleanly on exit or `Ctrl+C`
 
 ## Configuration
 
-Edit `src/config.js` to customize the behavior:
+Defaults live in [src/config.js](src/config.js) and can be overridden with environment variables (including a local `.env` file) or CLI flags (**CLI > env > defaults**). All configuration values are validated at startup with Zod.
 
-| Option            | Default                | Description                                       |
-| ----------------- | ---------------------- | ------------------------------------------------- |
-| `minIntervalMs`   | `180000` (3m)          | Minimum interval between searches (milliseconds)  |
-| `maxIntervalMs`   | `300000` (5m)          | Maximum interval between searches (milliseconds)  |
-| `maxSearches`     | `30`                   | Maximum number of searches (0 = unlimited)        |
-| `typingDelayMs`   | `200`                  | Delay between keystrokes (simulates human typing) |
-| `chromeDebugPort` | `9222`                 | Chrome remote debugging port                      |
-| `bingBaseUrl`     | `https://www.bing.com` | Bing homepage URL                                 |
+| Option                    | Default                  | Environment Variable       | CLI Flag                | Description                                                |
+| ------------------------- | ------------------------ | -------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `minIntervalMs`           | `60000` (1m)             | `BING_MIN_INTERVAL_MS`     | `--min-interval`        | Minimum interval between searches (milliseconds)           |
+| `maxIntervalMs`           | `120000` (2m)            | `BING_MAX_INTERVAL_MS`     | `--max-interval`        | Maximum interval between searches (milliseconds)           |
+| `maxSearches`             | `20`                     | `BING_MAX_SEARCHES`        | `--max-searches`        | Maximum desktop searches (`0` = unlimited)                 |
+| `mobile.maxSearches`      | `20`                     | `BING_MOBILE_MAX_SEARCHES` | `--mobile-max-searches` | Maximum mobile searches (`0` = unlimited)\*                |
+| `defaultTermCount`        | `30`                     | `BING_DEFAULT_TERM_COUNT`  | —                       | Terms generated when `maxSearches` is `0`                  |
+| `termHistoryLimit`        | `150`                    | `BING_TERM_HISTORY_LIMIT`  | —                       | Rolling history size kept to prevent repeat terms          |
+| `searchLanguage`          | `"Brazilian Portuguese"` | `BING_SEARCH_LANGUAGE`     | `--lang`                | Language requested when generating terms                   |
+| `typingDelayMs`           | `200`                    | `BING_TYPING_DELAY_MS`     | `--typing-delay`        | Base delay between keystrokes (milliseconds)               |
+| `behavior.typingJitterMs` | `80`                     | `BING_TYPING_JITTER_MS`    | —                       | Random `±` jitter applied to each keystroke (milliseconds) |
+| `chromeDebugPort`         | `9222`                   | `CHROME_DEBUG_PORT`        | `--port`                | Chrome remote debugging port                               |
+| `bingBaseUrl`             | `https://www.bing.com`   | `BING_BASE_URL`            | —                       | Bing homepage URL                                          |
 
-### Environment Variables
+\*When running with `--mobile` and `--mobile-max-searches` is not specified, `--max-searches` also acts as a fallback override for the current mobile run.
+
+Additional human-like timing ranges (`preSubmitDelayMs`, `preScrollDelayMs`, `scrollDownDurationMs`, `bottomPauseMs`, `scrollUpDurationMs`) and mobile emulation settings (`mobile.userAgent`, `mobile.userAgentMetadata`, `mobile.viewport`) can also be tuned in [src/config.js](src/config.js).
+
+### API Key Environment Variables
 
 | Variable         | Required | Description                                                         |
 | ---------------- | -------- | ------------------------------------------------------------------- |
-| `GEMINI_API_KEY` | Yes      | Your Google Gemini API key for search term generation               |
+| `GEMINI_API_KEY` | Yes\*    | Your Google Gemini API key for search term generation               |
 | `GOOGLE_API_KEY` | No       | Alternative to `GEMINI_API_KEY`; takes precedence when both are set |
+
+\*Only required for Gemini term generation. For offline term generation without an API key, see the fallback scripts below.
 
 ## Scripts
 
-| Command                           | Description                               |
-| --------------------------------- | ----------------------------------------- |
-| `pnpm start`                      | Run the application (desktop mode)        |
-| `pnpm start -- --mobile`          | Run the application in mobile mode        |
-| `pnpm dev`                        | Run in watch mode (auto-restart on save)  |
-| `node src/generateTermsGemini.js` | Generate new search terms using Gemini AI |
+| Command                               | Description                                       |
+| ------------------------------------- | ------------------------------------------------- |
+| `pnpm start`                          | Run the application (desktop mode)                |
+| `pnpm start -- --mobile`              | Run the application in mobile mode                |
+| `pnpm start -- --help`                | Show available CLI flags                          |
+| `pnpm dev`                            | Run in watch mode (auto-restart on save)          |
+| `pnpm run generate`                   | Generate desktop search terms using Gemini AI     |
+| `pnpm run generate:mobile`            | Generate mobile search terms using Gemini AI      |
+| `node scripts/generate-terms-ptbr.js` | Offline fallback generator (PT-BR, supports `-m`) |
+| `node scripts/generate-terms.js`      | Offline fallback generator (EN, supports `-m`)    |
+| `pnpm test`                           | Run unit tests (`node --test`)                    |
+| `pnpm run lint`                       | Run ESLint                                        |
+| `pnpm run typecheck`                  | Run TypeScript type checks (`tsc --noEmit`)       |
+| `pnpm run format:check`               | Verify Prettier formatting                        |
+| `pnpm run format`                     | Format files with Prettier                        |
 
 ### Mobile Mode
 
 To earn mobile Bing Rewards points, run the application with the `--mobile` or `-m` flag:
 
 ```bash
-# Using pnpm
-pnpm start -- --mobile
+# Full flow via startup script
+./start.sh --mobile
 
-# Or directly with node
-node src/index.js --mobile
+# Or directly with pnpm
+pnpm start -- --mobile
 ```
 
-Mobile mode emulates a mobile browser by:
+Mobile mode emulates an Android Chrome browser by:
 
-- Setting a mobile user agent (Android Chrome)
-- Configuring a mobile viewport with touch support
+- Configuring a mobile viewport with touch support (`412×915`, `deviceScaleFactor: 2.625`)
+- Setting an Android Chrome `User-Agent` along with matching User-Agent Client Hints (`Sec-CH-UA*`)
 
 **Tip:** Run desktop searches first, then run mobile searches separately to maximize your Bing Rewards points.
 
 ## How It Works
 
-1. **Search Term Generation**: Uses Google Gemini AI to generate trending search terms in Portuguese
-2. The startup script launches Chrome with remote debugging enabled
-3. Connects to Chrome via the DevTools Protocol (CDP) using Puppeteer
-4. Opens a new tab and navigates to Bing
-5. Performs searches with human-like typing behavior
-6. Scrolls through results naturally
-7. Waits a random interval (between min and max configured values)
-8. Repeats until the maximum number of searches is reached
+1. **Search Term Generation**: Uses Google Gemini AI (with automatic model fallback and Zod validation) to generate evergreen, realistic search terms while avoiding duplicates from the rolling history in `src/generated/`
+2. The startup script launches Chrome with remote debugging enabled and a dedicated profile (`chrome-user-data/`)
+3. Connects to Chrome over the DevTools Protocol (CDP) using `puppeteer-core`
+4. Reuses an open tab (or creates one if none is open) and navigates to Bing
+5. Performs searches with randomized keystroke jitter and pauses
+6. Scrolls smoothly through results (with a timer fallback so it does not stall when the screen turns off)
+7. Waits a random interval between `minIntervalMs` and `maxIntervalMs`
+8. Repeats until `maxSearches` is reached or `SIGINT`/`SIGTERM` is received
 
 ## License
 
-GNU AGPLv3
+GNU AGPLv3 ([License.txt](License.txt))

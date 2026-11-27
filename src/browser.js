@@ -1,46 +1,51 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 import { config, isMobileMode } from "./config.js";
 import { sleep } from "./utils.js";
 
-/** @type {import('puppeteer').Browser | null} */
+/** @type {import("puppeteer-core").Browser | null} */
 let browser = null;
 
-/** @type {import('puppeteer').Page | null} */
+/** @type {import("puppeteer-core").Page | null} */
 let page = null;
 
-/**>
- * Gets the current page instance
- * @returns {import('puppeteer').Page | null}
+/**
+ * Gets the current page instance.
+ * @returns {import("puppeteer-core").Page | null}
  */
 export function getPage() {
+  if (page && page.isClosed()) {
+    page = null;
+  }
   return page;
 }
 
 /**
- * Checks if the browser is still connected
+ * Checks if the browser and active page are still connected and open.
  * @returns {boolean}
  */
 export function isBrowserConnected() {
-  return browser !== null && browser.connected;
+  return browser !== null && browser.connected && page !== null && !page.isClosed();
 }
 
 /**
- * Applies mobile emulation settings to the page
- * @param {import('puppeteer').Page} page - The page to configure
+ * Applies mobile emulation settings (viewport + UA + Client Hints) to the page.
+ * @param {import("puppeteer-core").Page} targetPage - The page to configure
  * @returns {Promise<void>}
  */
-async function applyMobileEmulation(page) {
-  // Set mobile viewport
-  await page.setViewport(config.mobile.viewport);
+async function applyMobileEmulation(targetPage) {
+  await targetPage.setViewport(config.mobile.viewport);
 
-  // Set mobile user agent
-  await page.setUserAgent(config.mobile.userAgent);
+  await targetPage.setUserAgent({
+    userAgent: config.mobile.userAgent,
+    userAgentMetadata: config.mobile.userAgentMetadata,
+    platform: config.mobile.platform,
+  });
 
   console.log("✓ Mobile emulation enabled");
 }
 
 /**
- * Initializes the browser instance by connecting to an existing Chrome
+ * Initializes the browser instance by connecting to an existing Chrome over CDP.
  * @returns {Promise<void>}
  */
 export async function initBrowser() {
@@ -50,16 +55,15 @@ export async function initBrowser() {
   console.log(`Debug URL: ${debugUrl}`);
 
   browser = await puppeteer.connect({
-    "browserURL": debugUrl,
-    "defaultViewport": null,
-    "protocolTimeout": 60_000,
+    browserURL: debugUrl,
+    defaultViewport: null,
+    protocolTimeout: 60_000,
   });
 
-  // Use the existing tab instead of creating a new one
   const pages = await browser.pages();
-  page = pages[0] || (await browser.newPage());
+  const existingPage = pages.find((candidate) => !candidate.isClosed());
+  page = existingPage ?? (await browser.newPage());
 
-  // Apply mobile emulation if mobile mode is enabled
   if (isMobileMode()) {
     await applyMobileEmulation(page);
   }
@@ -68,27 +72,17 @@ export async function initBrowser() {
 }
 
 /**
- * Attempts to reconnect to Chrome
+ * Attempts to reconnect to Chrome after a delay.
  * @param {number} retryDelayMs - Delay before attempting reconnection
+ * @param {{ signal?: AbortSignal }} [options]
  * @returns {Promise<boolean>} True if reconnection was successful
  */
-export async function reconnectBrowser(retryDelayMs) {
+export async function reconnectBrowser(retryDelayMs, options = {}) {
   console.log("\nAttempting to reconnect to Chrome...");
 
-  // Clean up existing connections
-  page = null;
+  await closeBrowser();
 
-  if (browser) {
-    try {
-      await browser.disconnect();
-    } catch {
-      // Browser might already be disconnected
-    }
-    browser = null;
-  }
-
-  // Wait a bit before trying to reconnect
-  await sleep(retryDelayMs);
+  await sleep(retryDelayMs, { signal: options.signal });
 
   try {
     await initBrowser();
@@ -99,13 +93,19 @@ export async function reconnectBrowser(retryDelayMs) {
 }
 
 /**
- * Disconnects from the browser gracefully (does not close Chrome)
+ * Disconnects from the browser gracefully (does not close Chrome).
  * @returns {Promise<void>}
  */
 export async function closeBrowser() {
   page = null;
-  if (browser) {
-    await browser.disconnect(); // Disconnect without closing Chrome
-    browser = null;
+  const currentBrowser = browser;
+  browser = null;
+
+  if (currentBrowser) {
+    try {
+      await currentBrowser.disconnect();
+    } catch {
+      // Browser might already be disconnected or closed
+    }
   }
 }
