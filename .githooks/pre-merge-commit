@@ -1,0 +1,3 @@
+#!/bin/sh
+# Merges que geram commit passam pelas mesmas regras do pre-commit.
+exec "$(dirname "$0")/pre-commit"

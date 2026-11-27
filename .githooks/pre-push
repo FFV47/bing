@@ -1,0 +1,25 @@
+#!/bin/sh
+# Rejeita push de branches fora da especificação Conventional Branch.
+# Regex de https://conventionalbranch.org/v1.1.0/spec.json, convertida para POSIX ERE
+# (grupos "(?:" viram "("), como em https://conventionalbranch.org/enforce/
+pattern='^(main|master|develop|(feature|feat|bugfix|fix|hotfix|release|chore|ai|copilot|cursor|claude|codex)/[a-z0-9]+(\.[a-z0-9]+)*(-[a-z0-9]+(\.[a-z0-9]+)*)*)$'
+
+status=0
+# O Git envia uma linha por ref: <ref local> <sha local> <ref remota> <sha remota>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/*) ;;
+    *) continue ;; # tags e outras refs
+  esac
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;; # sha só com zeros: deleção de branch remota
+  esac
+  branch=${remote_ref#refs/heads/}
+  if ! printf '%s\n' "$branch" | grep -qE "$pattern"; then
+    echo "Branch '$branch' fora do padrão Conventional Branch: <tipo>/<descricao>, ex.: feature/add-login-page." >&2
+    echo "Renomeie com: git branch -m <novo-nome>. Veja https://conventionalbranch.org/" >&2
+    status=1
+  fi
+done
+exit $status
